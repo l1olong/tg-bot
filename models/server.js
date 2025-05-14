@@ -255,6 +255,8 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 const startServer = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
       serverApi: {
         version: '1',
         strict: true,
