@@ -175,7 +175,8 @@ async function saveComplaint(bot, msg, type, text, includeContactInfo = true, la
 }
 
 async function adminInterface(bot, msg, lang) {
-  if (msg.from.id != ADMIN_ID) {
+  const adminId = process.env.ADMIN_ID;
+  if (msg.from.id.toString() !== adminId && msg.from.id !== Number(adminId)) {
     return bot.sendMessage(msg.chat.id, messages[lang].accessDenied);
   }
 
@@ -354,7 +355,8 @@ async function askForAdminResponse(bot, chatId, lang) {
 }
 
 async function deleteComplaint(bot, msg, lang) {
-  if (msg.from.id != ADMIN_ID) {
+  const adminId = process.env.ADMIN_ID;
+  if (msg.from.id.toString() !== adminId && msg.from.id !== Number(adminId)) {
     return bot.sendMessage(msg.chat.id, messages[lang].accessDenied);
   }
 

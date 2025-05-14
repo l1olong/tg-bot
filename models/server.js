@@ -105,7 +105,7 @@ const auth = (req, res, next) => {
   }
 
   req.userId = userId;
-  req.isAdmin = userId === process.env.ADMIN_ID;
+  req.isAdmin = userId === process.env.ADMIN_ID || userId === Number(process.env.ADMIN_ID).toString();
   next();
 };
 
@@ -120,7 +120,9 @@ app.post('/api/login', (req, res) => {
   req.session.userId = userData.userId;
   req.session.username = userData.username;
   req.session.firstName = userData.firstName;
-  req.session.userRole = userData.userId === process.env.ADMIN_ID ? 'admin' : 'user';
+  
+  const adminId = process.env.ADMIN_ID;
+  req.session.userRole = (userData.userId === adminId || userData.userId === Number(adminId).toString()) ? 'admin' : 'user';
   
   res.json({ 
     role: req.session.userRole,
