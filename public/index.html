@@ -6,14 +6,12 @@
     <title>Customer Feedback Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="#">Customer Feedback Portal</a>
             <div class="d-flex align-items-center">
-                <div id="telegramLoginButton"></div>
                 <button class="btn btn-outline-light ms-2 me-2" onclick="setLanguage('ua')">🇺🇦 UA</button>
                 <button class="btn btn-outline-light" onclick="setLanguage('en')">🇺🇸 EN</button>
             </div>
@@ -21,19 +19,7 @@
     </nav>
 
     <div class="container mt-4">
-        <div id="loginContainer" class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title" data-translate="loginTitle">Login with Telegram</h5>
-                        <p class="card-text" data-translate="loginDescription">Please login with Telegram to submit and view feedback</p>
-                        <div id="telegramLoginWidget"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="mainContent" style="display: none;">
+        <div id="mainContent">
             <div class="row">
                 <div class="col-md-4">
                     <div class="card mb-4">
@@ -53,7 +39,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="contactInfo" class="form-label" data-translate="contactInfo">Contact Information</label>
-                                    <input type="text" class="form-control" id="contactInfo" readonly>
+                                    <input type="text" class="form-control" id="contactInfo">
                                 </div>
                                 <button type="submit" class="btn btn-primary" data-translate="submit">Submit</button>
                             </form>

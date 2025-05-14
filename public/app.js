@@ -2,8 +2,12 @@ const socket = io({
     withCredentials: true,
     transports: ['websocket', 'polling']
 });
+
 let currentLanguage = 'ua';
-let currentUser = null;
+let currentUser = {
+    id: Date.now().toString(), // Generate a temporary user ID
+    role: 'user'
+};
 
 const translations = {
     ua: {
@@ -66,61 +70,6 @@ const translations = {
     }
 };
 
-// Initialize Telegram login widget
-window.onload = function() {
-    const script = document.createElement('script');
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', process.env.BOT_USERNAME || 'YourBotUsername');
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-auth-url', `${window.location.origin}/api/login`);
-    document.getElementById('telegramLoginWidget').appendChild(script);
-};
-
-// Telegram auth callback
-async function onTelegramAuth(user) {
-    try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                userId: user.id.toString(),
-                username: user.username,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                photoUrl: user.photo_url,
-                authDate: user.auth_date,
-                hash: user.hash
-            })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            currentUser = {
-                ...user,
-                role: data.role
-            };
-            onLoginSuccess();
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        alert(currentLanguage === 'ua' ? 'Помилка входу' : 'Login error');
-    }
-}
-
-function onLoginSuccess() {
-    document.getElementById('loginContainer').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
-    document.getElementById('contactInfo').value = currentUser.username || currentUser.first_name;
-    if (currentUser.role === 'admin') {
-        document.body.classList.add('admin-mode');
-    }
-    updateFeedbackList();
-}
-
 function setLanguage(lang) {
     currentLanguage = lang;
     document.querySelectorAll('[data-translate]').forEach(element => {
@@ -164,12 +113,6 @@ function renderComplaint(complaint) {
 }
 
 async function updateFeedbackList() {
-    if (!currentUser) {
-        document.getElementById('feedbackList').innerHTML = 
-            `<p class="text-muted">${translations[currentLanguage].loginRequired}</p>`;
-        return;
-    }
-
     try {
         const response = await fetch('/api/complaints', {
             headers: {
@@ -194,16 +137,11 @@ async function updateFeedbackList() {
 
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    if (!currentUser) {
-        alert(translations[currentLanguage].loginRequired);
-        return;
-    }
 
     const formData = {
         type: document.getElementById('type').value,
         message: document.getElementById('message').value,
-        contactInfo: currentUser.username || currentUser.first_name,
+        contactInfo: document.getElementById('contactInfo').value || 'Anonymous',
         userId: currentUser.id
     };
 
@@ -219,7 +157,6 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
 
         if (response.ok) {
             document.getElementById('feedbackForm').reset();
-            document.getElementById('contactInfo').value = currentUser.username || currentUser.first_name;
             updateFeedbackList();
             alert(
                 currentLanguage === 'ua' 
@@ -251,20 +188,6 @@ socket.on('complaintUpdated', () => {
     updateFeedbackList();
 });
 
-// Check if user is already logged in
-async function checkLoginStatus() {
-    try {
-        const response = await fetch('/api/user');
-        if (response.ok) {
-            const user = await response.json();
-            currentUser = user;
-            onLoginSuccess();
-        }
-    } catch (error) {
-        console.error('Error checking login status:', error);
-    }
-}
-
 // Initialize the app
-checkLoginStatus();
+updateFeedbackList();
 setLanguage('ua');
