@@ -279,13 +279,14 @@ const mongooseOptions = {
     strict: true,
     deprecationErrors: true
   },
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
-  minPoolSize: 5,
+  retryWrites: true,
+  w: 'majority',
   maxPoolSize: 10,
-  ssl: true,
-  sslValidate: true
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4
 };
 
 // MongoDB connection
@@ -298,14 +299,7 @@ const startServer = async () => {
   try {
     mongoose.set('strictQuery', true);
     
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      retryWrites: true,
-      w: 'majority',
-      serverSelectionTimeoutMS: 30000,
-      heartbeatFrequencyMS: 2000
-    });
+    await mongoose.connect(process.env.MONGODB_URI, mongooseOptions);
     
     const PORT = process.env.PORT || 3001;
     const HOST = '0.0.0.0';
