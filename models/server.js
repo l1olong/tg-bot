@@ -94,9 +94,18 @@ function checkTelegramAuthorization(data) {
 
 // Authentication middleware
 const auth = (req, res, next) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No authorization header' });
   }
+
+  const userId = authHeader.split(' ')[1];
+  if (!userId) {
+    return res.status(401).json({ error: 'No user ID provided' });
+  }
+
+  req.userId = userId;
+  req.isAdmin = userId === process.env.ADMIN_ID;
   next();
 };
 
@@ -169,11 +178,11 @@ app.get('/', (req, res) => {
 app.get('/api/complaints', auth, async (req, res) => {
   try {
     let complaints;
-    if (req.session.userRole === 'admin') {
+    if (req.isAdmin) {
       complaints = await Complaint.find().sort({ createdAt: -1 });
     } else {
       complaints = await Complaint.find({ 
-        userId: req.session.userId 
+        userId: req.userId 
       }).sort({ createdAt: -1 });
     }
     
@@ -196,11 +205,11 @@ app.get('/api/complaints', auth, async (req, res) => {
 app.post('/api/complaints', auth, async (req, res) => {
   try {
     const complaint = new Complaint({
-      userId: req.session.userId,
-      userRole: req.session.userRole,
+      userId: req.userId,
+      userRole: req.isAdmin ? 'admin' : 'user',
       type: req.body.type,
       message: req.body.message,
-      contactInfo: req.session.username || req.session.firstName || 'Anonymous user',
+      contactInfo: req.body.contactInfo || 'Anonymous user',
       status: 'new'
     });
     
@@ -216,7 +225,7 @@ app.post('/api/complaints', auth, async (req, res) => {
 // Admin response to complaint
 app.put('/api/complaints/:id/respond', auth, async (req, res) => {
   try {
-    if (req.session.userRole !== 'admin') {
+    if (!req.isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

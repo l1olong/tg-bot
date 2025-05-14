@@ -171,7 +171,11 @@ async function updateFeedbackList() {
     }
 
     try {
-        const response = await fetch('/api/complaints');
+        const response = await fetch('/api/complaints', {
+            headers: {
+                'Authorization': `Bearer ${currentUser.id}`
+            }
+        });
         if (response.ok) {
             const complaints = await response.json();
             const feedbackList = document.getElementById('feedbackList');
@@ -207,7 +211,8 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         const response = await fetch('/api/complaints', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.id}`
             },
             body: JSON.stringify(formData)
         });
