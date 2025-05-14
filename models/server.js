@@ -8,6 +8,10 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const crypto = require('crypto');
+const tls = require('tls');
+
+// Force TLS 1.2
+tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
 
 // Initialize express and create HTTP server
 const app = express();
@@ -257,6 +261,22 @@ app.use((req, res) => {
   res.status(404).json({ status: 'error', message: 'Not Found' });
 });
 
+// MongoDB connection options
+const mongooseOptions = {
+  serverApi: {
+    version: '1',
+    strict: true,
+    deprecationErrors: true
+  },
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
+  minPoolSize: 5,
+  maxPoolSize: 10,
+  ssl: true,
+  sslValidate: true
+};
+
 // MongoDB connection
 mongoose.connection.on('connected', () => console.log('MongoDB connected successfully'));
 mongoose.connection.on('error', (err) => console.error('MongoDB connection error:', err));
@@ -265,13 +285,7 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 // Start server
 const startServer = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverApi: {
-        version: '1',
-        strict: true,
-        deprecationErrors: true
-      }
-    });
+    await mongoose.connect(process.env.MONGODB_URI, mongooseOptions);
     
     const PORT = process.env.PORT || 3001;
     const HOST = '0.0.0.0';
