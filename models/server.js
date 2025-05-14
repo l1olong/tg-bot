@@ -255,16 +255,11 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 const startServer = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
-      ssl: true,
       tls: true,
-      tlsInsecure: false,
-      tlsAllowInvalidCertificates: false,
-      tlsAllowInvalidHostnames: false,
       minPoolSize: 5,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      authSource: 'admin',
       retryWrites: true,
       w: 'majority'
     });
