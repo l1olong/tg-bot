@@ -254,20 +254,12 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 // Start server
 const startServer = async () => {
   try {
-    process.env.NODE_TLS_MIN_VERSION = 'TLSv1.2';
     await mongoose.connect(process.env.MONGODB_URI, {
       serverApi: {
         version: '1',
         strict: true,
         deprecationErrors: true
-      },
-      ssl: true,
-      sslValidate: true,
-      tls: true,
-      tlsInsecure: false,
-      minPoolSize: 5,
-      maxPoolSize: 10,
-      retryWrites: true
+      }
     });
     
     const PORT = process.env.PORT || 3001;
