@@ -37,7 +37,18 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60 // Session TTL (1 day)
+    ttl: 24 * 60 * 60, // Session TTL (1 day)
+    crypto: {
+      secret: process.env.SESSION_SECRET || 'your-secret-key'
+    },
+    autoRemove: 'native',
+    mongoOptions: {
+      serverApi: {
+        version: '1',
+        strict: true,
+        deprecationErrors: true
+      }
+    }
   }),
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
@@ -255,8 +266,6 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 const startServer = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverApi: {
         version: '1',
         strict: true,
