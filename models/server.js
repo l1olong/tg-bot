@@ -285,12 +285,15 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 // Start server
 const startServer = async () => {
   try {
+    mongoose.set('strictQuery', true);
+    
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      ssl: true
+      retryWrites: true,
+      w: 'majority',
+      serverSelectionTimeoutMS: 30000,
+      heartbeatFrequencyMS: 2000
     });
     
     const PORT = process.env.PORT || 3001;
