@@ -5,9 +5,34 @@ const socket = io({
 
 let currentLanguage = 'ua';
 let currentUser = {
-    id: Date.now().toString(), // Generate a temporary user ID
+    id: null,
     role: 'user'
 };
+
+// Add Telegram login handler
+window.onTelegramAuth = function(user) {
+    currentUser.id = user.id.toString();
+    currentUser.role = user.id.toString() === process.env.ADMIN_ID ? 'admin' : 'user';
+    updateFeedbackList();
+}
+
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/user', {
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const user = await response.json();
+            currentUser.id = user.id;
+            currentUser.role = user.role;
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        return false;
+    }
+}
 
 const translations = {
     ua: {
@@ -113,12 +138,23 @@ function renderComplaint(complaint) {
 }
 
 async function updateFeedbackList() {
+    if (!currentUser.id) {
+        const isAuth = await checkAuth();
+        if (!isAuth) {
+            document.getElementById('feedbackList').innerHTML = 
+                `<div class="alert alert-warning">${translations[currentLanguage].loginRequired}</div>`;
+            return;
+        }
+    }
+
     try {
         const response = await fetch('/api/complaints', {
             headers: {
                 'Authorization': `Bearer ${currentUser.id}`
-            }
+            },
+            credentials: 'include'
         });
+        
         if (response.ok) {
             const complaints = await response.json();
             const feedbackList = document.getElementById('feedbackList');
@@ -128,7 +164,13 @@ async function updateFeedbackList() {
                 return;
             }
 
-            feedbackList.innerHTML = complaints.map(renderComplaint).join('');
+            feedbackList.innerHTML = complaints
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(renderComplaint)
+                .join('');
+        } else if (response.status === 401) {
+            document.getElementById('feedbackList').innerHTML = 
+                `<div class="alert alert-warning">${translations[currentLanguage].loginRequired}</div>`;
         }
     } catch (error) {
         console.error('Error fetching feedback:', error);

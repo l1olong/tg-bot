@@ -20,8 +20,7 @@ const server = http.createServer(app);
 // Configure Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: process.env.WEBAPP_URL || '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: true,
     credentials: true
   }
 });
@@ -29,9 +28,9 @@ const io = socketIo(server, {
 // Basic middleware
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.json());
-app.use(cors({ 
-  origin: process.env.WEBAPP_URL || '*', 
-  credentials: true 
+app.use(cors({
+  origin: true,
+  credentials: true
 }));
 
 // Configure session with MongoDB store
@@ -41,23 +40,11 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60, // Session TTL (1 day)
-    crypto: {
-      secret: process.env.SESSION_SECRET || 'your-secret-key'
-    },
-    autoRemove: 'native',
-    mongoOptions: {
-      serverApi: {
-        version: '1',
-        strict: true,
-        deprecationErrors: true
-      }
-    }
+    collectionName: 'sessions'
   }),
-  cookie: { 
+  cookie: {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // Cookie max age (1 day)
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
   }
 }));
 
@@ -72,178 +59,108 @@ app.use((req, res, next) => {
   next();
 });
 
-// Telegram auth check function
-function checkTelegramAuthorization(data) {
-  const botToken = process.env.TELEGRAM_TOKEN.split(':')[1];
-  const secret = crypto.createHash('sha256')
-    .update(botToken)
-    .digest();
-
-  const checkString = Object.keys(data)
-    .filter(key => key !== 'hash')
-    .sort()
-    .map(key => `${key}=${data[key]}`)
-    .join('\n');
-
-  const hash = crypto.createHmac('sha256', secret)
-    .update(checkString)
-    .digest('hex');
-
-  return hash === data.hash && Math.floor(Date.now() / 1000) - data.auth_date < 86400;
-}
-
 // Authentication middleware
 const auth = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
-
-  const userId = authHeader.split(' ')[1];
-  if (!userId) {
-    return res.status(401).json({ error: 'No user ID provided' });
-  }
-
-  req.userId = userId;
-  req.isAdmin = userId === process.env.ADMIN_ID || userId === Number(process.env.ADMIN_ID).toString();
+  req.user = { id: token };
   next();
 };
 
-// Login route
-app.post('/api/login', (req, res) => {
-  const userData = req.body;
-  
-  if (!checkTelegramAuthorization(userData)) {
-    return res.status(401).json({ error: 'Invalid authorization' });
-  }
+// Check if user is admin
+const isAdmin = (userId) => {
+  return userId === process.env.ADMIN_ID;
+};
 
-  req.session.userId = userData.userId;
-  req.session.username = userData.username;
-  req.session.firstName = userData.firstName;
-  
-  const adminId = process.env.ADMIN_ID;
-  req.session.userRole = (userData.userId === adminId || userData.userId === Number(adminId).toString()) ? 'admin' : 'user';
-  
-  res.json({ 
-    role: req.session.userRole,
-    userId: req.session.userId,
-    username: req.session.username,
-    firstName: req.session.firstName
-  });
-});
-
-// Get current user
+// Routes
 app.get('/api/user', (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not logged in' });
-  }
-  
-  res.json({
-    id: req.session.userId,
-    username: req.session.username,
-    firstName: req.session.firstName,
-    role: req.session.userRole
-  });
-});
-
-// Logout route
-app.post('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ message: 'Logged out' });
-});
-
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    const isMongoConnected = mongoose.connection.readyState === 1;
-    if (!isMongoConnected) {
-      throw new Error('MongoDB is not connected');
-    }
-    res.status(200).json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      mongoStatus: 'connected'
+  if (req.session.user) {
+    res.json({
+      id: req.session.user.id,
+      role: isAdmin(req.session.user.id) ? 'admin' : 'user'
     });
-  } catch (error) {
-    console.error('Healthcheck failed:', error);
-    res.status(503).json({ status: 'error', message: error.message });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
   }
 });
 
-// Basic routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+app.post('/api/auth/telegram', (req, res) => {
+  const { id, first_name, username, photo_url, auth_date, hash } = req.body;
+
+  // Here you should verify the Telegram auth data
+  // For now, we'll just store the user in session
+  req.session.user = {
+    id: id.toString(),
+    username,
+    role: isAdmin(id.toString()) ? 'admin' : 'user'
+  };
+
+  res.json({ success: true });
 });
 
-// Get complaints - filtered by user role
+// Get complaints
 app.get('/api/complaints', auth, async (req, res) => {
   try {
-    let complaints;
-    if (req.isAdmin) {
-      complaints = await Complaint.find().sort({ createdAt: -1 });
-    } else {
-      complaints = await Complaint.find({ 
-        userId: req.userId 
-      }).sort({ createdAt: -1 });
+    let query = {};
+
+    // If not admin, only show user's own complaints
+    if (!isAdmin(req.user.id)) {
+      query.userId = req.user.id;
     }
-    
-    res.json(complaints.map(complaint => ({
-      id: complaint._id,
-      type: complaint.type,
-      message: complaint.message,
-      contactInfo: complaint.contactInfo,
-      status: complaint.status,
-      date: complaint.createdAt,
-      adminResponse: complaint.adminResponse
-    })));
+
+    const complaints = await Complaint.find(query)
+      .sort({ createdAt: -1 });
+
+    res.json(complaints);
   } catch (error) {
-    console.error('Error getting complaints:', error);
+    console.error('Error fetching complaints:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Submit complaint
+// Create complaint
 app.post('/api/complaints', auth, async (req, res) => {
   try {
     const complaint = new Complaint({
-      userId: req.userId,
-      userRole: req.isAdmin ? 'admin' : 'user',
+      userId: req.user.id,
       type: req.body.type,
       message: req.body.message,
-      contactInfo: req.body.contactInfo || 'Anonymous user',
-      status: 'new'
+      contactInfo: req.body.contactInfo
     });
-    
+
     await complaint.save();
-    io.emit('newComplaint', complaint);
-    res.status(201).json(complaint);
+    io.emit('newComplaint');
+
+    res.json(complaint);
   } catch (error) {
-    console.error('Error saving complaint:', error);
+    console.error('Error creating complaint:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Admin response to complaint
-app.put('/api/complaints/:id/respond', auth, async (req, res) => {
+// Update complaint (admin only)
+app.put('/api/complaints/:id', auth, async (req, res) => {
   try {
-    if (!req.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!isAdmin(req.user.id)) {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) {
       return res.status(404).json({ error: 'Complaint not found' });
     }
-    
+
     complaint.status = 'answered';
     complaint.adminResponse = {
       text: req.body.response,
       date: new Date()
     };
-    
+
     await complaint.save();
-    io.emit('complaintUpdated', complaint);
+    io.emit('complaintUpdated');
+
     res.json(complaint);
   } catch (error) {
     console.error('Error updating complaint:', error);
@@ -262,7 +179,7 @@ io.on('connection', (socket) => {
 // Error handlers
 app.use((err, req, res, next) => {
   console.error('Global error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     status: 'error',
     message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
   });
@@ -298,9 +215,9 @@ mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected')
 const startServer = async () => {
   try {
     mongoose.set('strictQuery', true);
-    
+
     await mongoose.connect(process.env.MONGODB_URI, mongooseOptions);
-    
+
     const PORT = process.env.PORT || 3001;
     const HOST = '0.0.0.0';
 
