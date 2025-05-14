@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: rupor-bot
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: WEBAPP_URL
+        sync: false

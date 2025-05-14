@@ -1,0 +1,92 @@
+.feedback-item {
+    border-left: 4px solid #007bff;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.feedback-item.suggestion {
+    border-left-color: #28a745;
+}
+
+.feedback-item.complaint {
+    border-left-color: #dc3545;
+}
+
+.feedback-item .status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+.feedback-item .status.new {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.feedback-item .status.answered {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.feedback-meta {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.feedback-message {
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
+.admin-response {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+    border-left: 4px solid #17a2b8;
+}
+
+.admin-response p {
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
+.admin-response small {
+    display: block;
+    margin-top: 0.5rem;
+}
+
+.admin-actions {
+    margin-top: 1rem;
+}
+
+#userInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.accordion-item {
+    border-color: #dee2e6;
+    margin-bottom: 0.5rem;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+.accordion-button:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(222, 226, 230, 0.5);
+}
+
+.accordion-body {
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
