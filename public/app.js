@@ -9,6 +9,10 @@ let currentUser = {
     role: 'user'
 };
 
+// Authentication state
+let isAuthenticated = false;
+let userRole = 'user';
+
 // Add Telegram login handler
 window.onTelegramAuth = function(user) {
     currentUser.id = user.id.toString();
@@ -32,6 +36,27 @@ async function checkAuth() {
         console.error('Auth check failed:', error);
         return false;
     }
+}
+
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/user');
+        if (response.ok) {
+            const userData = await response.json();
+            isAuthenticated = true;
+            userRole = userData.role;
+            updateUI();
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
+    }
+}
+
+function updateUI() {
+    const adminControls = document.querySelectorAll('.admin-only');
+    adminControls.forEach(el => {
+        el.style.display = userRole === 'admin' ? 'block' : 'none';
+    });
 }
 
 const translations = {
@@ -138,23 +163,8 @@ function renderComplaint(complaint) {
 }
 
 async function updateFeedbackList() {
-    if (!currentUser.id) {
-        const isAuth = await checkAuth();
-        if (!isAuth) {
-            document.getElementById('feedbackList').innerHTML = 
-                `<div class="alert alert-warning">${translations[currentLanguage].loginRequired}</div>`;
-            return;
-        }
-    }
-
     try {
-        const response = await fetch('/api/complaints', {
-            headers: {
-                'Authorization': `Bearer ${currentUser.id}`
-            },
-            credentials: 'include'
-        });
-        
+        const response = await fetch('/api/complaints');
         if (response.ok) {
             const complaints = await response.json();
             const feedbackList = document.getElementById('feedbackList');
@@ -168,12 +178,28 @@ async function updateFeedbackList() {
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .map(renderComplaint)
                 .join('');
-        } else if (response.status === 401) {
+        } else {
             document.getElementById('feedbackList').innerHTML = 
                 `<div class="alert alert-warning">${translations[currentLanguage].loginRequired}</div>`;
         }
     } catch (error) {
         console.error('Error fetching feedback:', error);
+    }
+}
+
+async function loadComplaints() {
+    try {
+        const response = await fetch('/api/complaints');
+        if (!response.ok) throw new Error('Failed to fetch complaints');
+        const complaints = await response.json();
+        updateFeedbackList(complaints);
+    } catch (error) {
+        console.error('Error:', error);
+        alert(
+            currentLanguage === 'ua' 
+                ? 'Помилка при завантаженні звернень' 
+                : 'Failed to load complaints'
+        );
     }
 }
 
@@ -231,5 +257,10 @@ socket.on('complaintUpdated', () => {
 });
 
 // Initialize the app
+document.addEventListener('DOMContentLoaded', () => {
+    loadComplaints(); // Load complaints immediately without requiring auth
+    checkAuthStatus(); // Optional - check if user is logged in
+});
+
 updateFeedbackList();
 setLanguage('ua');

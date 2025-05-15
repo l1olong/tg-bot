@@ -61,6 +61,11 @@ app.use((req, res, next) => {
 
 // Authentication middleware
 const auth = (req, res, next) => {
+  // Allow public access to view complaints
+  if (req.method === 'GET' && req.path === '/api/complaints') {
+    return next();
+  }
+
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -101,12 +106,11 @@ app.post('/api/auth/telegram', (req, res) => {
 });
 
 // Get complaints
-app.get('/api/complaints', auth, async (req, res) => {
+app.get('/api/complaints', async (req, res) => {
   try {
     let query = {};
-
-    // If not admin, only show user's own complaints
-    if (!isAdmin(req.user.id)) {
+    // If user is authenticated and not admin, only show their complaints
+    if (req.user && !isAdmin(req.user.id)) {
       query.userId = req.user.id;
     }
 
@@ -189,46 +193,43 @@ app.use((req, res) => {
   res.status(404).json({ status: 'error', message: 'Not Found' });
 });
 
-// MongoDB connection options
-const mongooseOptions = {
-  serverApi: {
-    version: '1',
-    strict: true,
-    deprecationErrors: true
-  },
-  retryWrites: true,
-  w: 'majority',
-  maxPoolSize: 10,
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-  family: 4
-};
-
 // MongoDB connection
-mongoose.connection.on('connected', () => console.log('MongoDB connected successfully'));
-mongoose.connection.on('error', (err) => console.error('MongoDB connection error:', err));
-mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected'));
+mongoose.set('strictQuery', false);
 
-// Start server
-const startServer = async () => {
+async function connectToDatabase() {
   try {
-    mongoose.set('strictQuery', true);
-
-    await mongoose.connect(process.env.MONGODB_URI, mongooseOptions);
-
-    const PORT = process.env.PORT || 3001;
-    const HOST = '0.0.0.0';
-
-    server.listen(PORT, HOST, () => {
-      console.log(`Server running on ${HOST}:${PORT}`);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000
     });
+    console.log('Connected to MongoDB successfully');
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console.error('MongoDB connection error:', error);
+    // Don't exit the process, allow for retry
+    return false;
   }
-};
+  return true;
+}
+
+// Retry connection if it fails
+async function startServer() {
+  let isConnected = false;
+  while (!isConnected) {
+    isConnected = await connectToDatabase();
+    if (!isConnected) {
+      console.log('Retrying connection in 5 seconds...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+
+  const PORT = process.env.PORT || 3001;
+  const HOST = '0.0.0.0';
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
+  });
+}
 
 startServer();
 
