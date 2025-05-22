@@ -90,3 +90,50 @@
     padding: 1rem;
     background-color: #f8f9fa;
 }
+
+/* Стилі для блоку фільтрів */
+#filtersContainer {
+    background-color: #f8f9fa;
+    border-color: #dee2e6 !important;
+    transition: all 0.3s ease;
+}
+
+#toggleFiltersBtn {
+    transition: all 0.2s ease;
+}
+
+#toggleFiltersBtn:hover {
+    background-color: #e9ecef;
+}
+
+.filter-checkbox {
+    cursor: pointer;
+}
+
+#sortOrder {
+    border-color: #dee2e6;
+}
+
+#sortOrder:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+/* Анімація для плавної появи/зникнення фільтрів */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+.fade-out {
+    animation: fadeOut 0.3s ease forwards;
+}

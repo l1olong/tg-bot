@@ -101,7 +101,38 @@
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title" data-translate="feedbackList">Feedback List</h5>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title mb-0" data-translate="feedbackList">Feedback List</h5>
+                                <button class="btn btn-sm btn-outline-secondary" id="toggleFiltersBtn" data-translate="filters">Filters</button>
+                            </div>
+                            
+                            <div id="filtersContainer" class="mb-3 p-3 border rounded" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input filter-checkbox" type="checkbox" id="complaintFilter" value="complaint" checked>
+                                            <label class="form-check-label" for="complaintFilter" data-translate="complaint">Complaint</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input filter-checkbox" type="checkbox" id="suggestionFilter" value="suggestion" checked>
+                                            <label class="form-check-label" for="suggestionFilter" data-translate="suggestion">Suggestion</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="answeredFilter">
+                                            <label class="form-check-label" for="answeredFilter" data-translate="showAnswered">Show with responses</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select form-select-sm" id="sortOrder">
+                                            <option value="newest" data-translate="newestFirst">Newest first</option>
+                                            <option value="oldest" data-translate="oldestFirst">Oldest first</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div id="feedbackList"></div>
                         </div>
                     </div>

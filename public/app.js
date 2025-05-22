@@ -87,7 +87,11 @@ const translations = {
         faqAnswer1: 'Ви можете залишити скаргу через форму зворотного зв\'язку.',
         faqAnswer2: 'Ви можете залишити пропозицію, скориставшись тією ж формою.',
         faqAnswer3: 'Відповідь надається адміністратором після розгляду звернення.',
-        answer: 'Відповідь'
+        answer: 'Відповідь',
+        filters: 'Фільтри',
+        showAnswered: 'Показати з відповідями',
+        newestFirst: 'Спочатку нові',
+        oldestFirst: 'Спочатку старі'
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -116,7 +120,11 @@ const translations = {
         faqAnswer1: 'You can leave a complaint through the feedback form.',
         faqAnswer2: 'You can leave a suggestion using the same form.',
         faqAnswer3: 'The response is provided by the admin after reviewing the submission.',
-        answer: 'Answer'
+        answer: 'Answer',
+        filters: 'Filters',
+        showAnswered: 'Show with responses',
+        newestFirst: 'Newest first',
+        oldestFirst: 'Oldest first'
     }
 };
 
@@ -162,46 +170,85 @@ function renderComplaint(complaint) {
     `;
 }
 
-async function updateFeedbackList() {
-    try {
-        const response = await fetch('/api/complaints');
-        if (response.ok) {
-            const complaints = await response.json();
-            const feedbackList = document.getElementById('feedbackList');
-            
-            if (complaints.length === 0) {
-                feedbackList.innerHTML = `<p class="text-muted">${translations[currentLanguage].noFeedback}</p>`;
-                return;
-            }
+let allComplaints = [];
 
-            feedbackList.innerHTML = complaints
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .map(renderComplaint)
-                .join('');
-        } else {
-            document.getElementById('feedbackList').innerHTML = 
-                `<div class="alert alert-warning">${translations[currentLanguage].loginRequired}</div>`;
-        }
-    } catch (error) {
-        console.error('Error fetching feedback:', error);
+function filterAndDisplayComplaints() {
+    const complaintFilterChecked = document.getElementById('complaintFilter').checked;
+    const suggestionFilterChecked = document.getElementById('suggestionFilter').checked;
+    const answeredFilterChecked = document.getElementById('answeredFilter').checked;
+    const sortOrder = document.getElementById('sortOrder').value;
+    
+    let filteredComplaints = allComplaints.filter(complaint => {
+        if (complaint.type === 'complaint' && !complaintFilterChecked) return false;
+        if (complaint.type === 'suggestion' && !suggestionFilterChecked) return false;
+        
+        if (answeredFilterChecked && !complaint.adminResponse) return false;
+        
+        return true;
+    });
+    
+    filteredComplaints.sort((a, b) => {
+        const dateA = new Date(a.date || a.createdAt);
+        const dateB = new Date(b.date || b.createdAt);
+        
+        return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+    
+    const feedbackList = document.getElementById('feedbackList');
+    
+    if (filteredComplaints.length === 0) {
+        feedbackList.innerHTML = `<p class="text-muted">${translations[currentLanguage].noFeedback}</p>`;
+        return;
     }
+    
+    feedbackList.innerHTML = filteredComplaints
+        .map(renderComplaint)
+        .join('');
 }
 
 async function loadComplaints() {
     try {
         const response = await fetch('/api/complaints');
         if (!response.ok) throw new Error('Failed to fetch complaints');
-        const complaints = await response.json();
-        updateFeedbackList(complaints);
+        
+        const data = await response.json();
+        allComplaints = data.complaints || data;
+        
+        filterAndDisplayComplaints();
     } catch (error) {
         console.error('Error:', error);
-        alert(
+        const feedbackList = document.getElementById('feedbackList');
+        feedbackList.innerHTML = `<div class="alert alert-danger">${
             currentLanguage === 'ua' 
                 ? 'Помилка при завантаженні звернень' 
                 : 'Failed to load complaints'
-        );
+        }</div>`;
     }
 }
+
+async function updateFeedbackList() {
+    await loadComplaints();
+}
+
+function initializeFilters() {
+    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+    const filtersContainer = document.getElementById('filtersContainer');
+    
+    toggleFiltersBtn.addEventListener('click', () => {
+        filtersContainer.style.display = filtersContainer.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    document.getElementById('complaintFilter').addEventListener('change', filterAndDisplayComplaints);
+    document.getElementById('suggestionFilter').addEventListener('change', filterAndDisplayComplaints);
+    document.getElementById('answeredFilter').addEventListener('change', filterAndDisplayComplaints);
+    document.getElementById('sortOrder').addEventListener('change', filterAndDisplayComplaints);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeFilters();
+    loadComplaints();
+    checkAuthStatus();
+});
 
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -255,12 +302,3 @@ socket.on('newComplaint', () => {
 socket.on('complaintUpdated', () => {
     updateFeedbackList();
 });
-
-// Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-    loadComplaints(); // Load complaints immediately without requiring auth
-    checkAuthStatus(); // Optional - check if user is logged in
-});
-
-updateFeedbackList();
-setLanguage('ua');
