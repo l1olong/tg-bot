@@ -19,6 +19,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.Telegram && window.Telegram.WebApp) {
         console.log('Telegram WebApp detected');
         
+        // Виводимо дані Telegram WebApp для дебагу
+        console.log('WebApp initData:', window.Telegram.WebApp.initData);
+        console.log('WebApp initDataUnsafe:', window.Telegram.WebApp.initDataUnsafe);
+        
+        // Якщо є дані користувача, виводимо їх
+        if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            const user = window.Telegram.WebApp.initDataUnsafe.user;
+            console.log('Telegram user data:', {
+                id: user.id,
+                username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name
+            });
+        }
+        
         // Налаштовуємо WebApp
         const webApp = window.Telegram.WebApp;
         webApp.expand();
@@ -31,6 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
             authenticateWithTelegram(initData);
         } else {
             console.warn('No init data available from Telegram WebApp');
+            // Додаємо елемент для відображення помилки
+            const debugInfo = document.createElement('div');
+            debugInfo.className = 'alert alert-warning';
+            debugInfo.innerHTML = 'Telegram WebApp initData is empty. Authentication may fail.';
+            document.body.prepend(debugInfo);
         }
     } else {
         console.log('Not running in Telegram WebApp');
@@ -267,6 +287,9 @@ function renderComplaint(complaint) {
                 ${translations[currentLanguage].date}: ${formatDate(complaint.date)}
                 ${complaint.contactInfo ? `| ${translations[currentLanguage].contactInfo}: ${complaint.contactInfo}` : ''}
             </div>
+            ${userRole === 'admin' ? `
+                <button class="btn btn-sm btn-primary" onclick="showResponseModal('${complaint.id}')">${translations[currentLanguage].answer}</button>
+            ` : ''}
         </div>
     `;
 }
@@ -397,3 +420,172 @@ socket.on('newComplaint', () => {
 socket.on('complaintUpdated', () => {
     updateFeedbackList();
 });
+
+// Функція для показу модального вікна відповіді
+function showResponseModal(complaintId) {
+    console.log('Showing response modal for complaint:', complaintId);
+    
+    // Створюємо модальне вікно, якщо його ще немає
+    let modal = document.getElementById('responseModal');
+    
+    if (!modal) {
+        console.log('Creating new response modal');
+        const modalHtml = `
+            <div class="modal fade" id="responseModal" tabindex="-1" aria-labelledby="responseModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="responseModalLabel">${currentLanguage === 'ua' ? 'Відповідь на звернення' : 'Response to Feedback'}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="responseForm">
+                                <input type="hidden" id="complaintId">
+                                <div class="mb-3">
+                                    <label for="responseText" class="form-label">${currentLanguage === 'ua' ? 'Текст відповіді' : 'Response Text'}</label>
+                                    <textarea class="form-control" id="responseText" rows="5" required></textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${currentLanguage === 'ua' ? 'Скасувати' : 'Cancel'}</button>
+                            <button type="button" class="btn btn-primary" id="sendResponseBtn">${currentLanguage === 'ua' ? 'Надіслати' : 'Send'}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('responseModal');
+        
+        // Додаємо обробник події для кнопки надсилання відповіді
+        document.getElementById('sendResponseBtn').addEventListener('click', sendResponse);
+    }
+    
+    // Встановлюємо ID звернення
+    document.getElementById('complaintId').value = complaintId;
+    
+    // Показуємо модальне вікно
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+// Функція для надсилання відповіді на звернення
+async function sendResponse() {
+    const complaintId = document.getElementById('complaintId').value;
+    const responseText = document.getElementById('responseText').value;
+    
+    console.log('Sending response for complaint:', complaintId);
+    
+    if (!responseText.trim()) {
+        console.error('Response text is empty');
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Будь ласка, введіть текст відповіді' 
+                : 'Please enter response text',
+            'error'
+        );
+        return;
+    }
+    
+    try {
+        // Показуємо індикатор завантаження
+        const sendResponseBtn = document.getElementById('sendResponseBtn');
+        const originalButtonText = sendResponseBtn.innerHTML;
+        sendResponseBtn.disabled = true;
+        sendResponseBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}`;
+        
+        const response = await fetch(`/api/complaints/${complaintId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.id}`
+            },
+            body: JSON.stringify({ response: responseText }),
+            credentials: 'include'
+        });
+        
+        // Відновлюємо кнопку
+        sendResponseBtn.disabled = false;
+        sendResponseBtn.innerHTML = originalButtonText;
+        
+        if (response.ok) {
+            console.log('Response sent successfully');
+            
+            // Закриваємо модальне вікно
+            const modal = document.getElementById('responseModal');
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            bsModal.hide();
+            
+            // Очищаємо форму
+            document.getElementById('responseForm').reset();
+            
+            // Оновлюємо список звернень
+            updateFeedbackList();
+            
+            // Показуємо повідомлення про успіх
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Відповідь успішно надіслано!' 
+                    : 'Response sent successfully!',
+                'success'
+            );
+        } else {
+            console.error('Error sending response, status:', response.status);
+            
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { error: 'Failed to parse error response' };
+            }
+            
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Помилка при надсиланні відповіді: ' + (errorData.error || 'невідома помилка') 
+                    : 'Error sending response: ' + (errorData.error || 'unknown error'),
+                'error'
+            );
+        }
+    } catch (error) {
+        console.error('Error sending response:', error);
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Помилка при надсиланні відповіді: ' + error.message 
+                : 'Error sending response: ' + error.message,
+            'error'
+        );
+    }
+}
+
+// Функція для показу повідомлень, які автоматично зникають
+function showToast(message, type = 'success', duration = 4000) {
+    console.log(`Showing toast: ${message} (${type})`);
+    
+    // Створюємо елемент для повідомлення
+    const toast = document.createElement('div');
+    toast.className = `toast-message toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="${type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Додаємо елемент на сторінку
+    document.body.appendChild(toast);
+    
+    // Додаємо клас для анімації появи
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Видаляємо повідомлення після вказаного часу
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300); // Час анімації зникнення
+    }, duration);
+}

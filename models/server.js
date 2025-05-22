@@ -94,17 +94,86 @@ app.get('/api/user', (req, res) => {
 });
 
 app.post('/api/auth/telegram', (req, res) => {
-  const { id, first_name, username, photo_url, auth_date, hash } = req.body;
-
-  // Here you should verify the Telegram auth data
-  // For now, we'll just store the user in session
-  req.session.user = {
-    id: id.toString(),
-    username,
-    role: isAdmin(id.toString()) ? 'admin' : 'user'
-  };
-
-  res.json({ success: true });
+  try {
+    const { initData, userData } = req.body;
+    
+    console.log('Received auth request with initData and userData:', { 
+      initDataLength: initData ? initData.length : 0,
+      userData: userData ? { id: userData.id, username: userData.username } : null
+    });
+    
+    if (!initData) {
+      console.error('Missing initData in request');
+      return res.status(400).json({ error: 'Missing initData' });
+    }
+    
+    // Валідуємо дані Telegram WebApp
+    const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
+    console.log('Telegram data validation result:', isValid);
+    
+    if (!isValid && process.env.NODE_ENV === 'production') {
+      console.error('Invalid Telegram data signature');
+      return res.status(401).json({ error: 'Invalid Telegram data' });
+    }
+    
+    // Парсимо дані користувача з initData
+    const params = new URLSearchParams(initData);
+    const userDataStr = params.get('user');
+    
+    if (!userDataStr && !userData) {
+      console.error('User data not found in initData and no userData provided');
+      return res.status(400).json({ error: 'User data not found' });
+    }
+    
+    // Використовуємо дані з initData або з userData (запасний варіант)
+    let user;
+    if (userDataStr) {
+      user = JSON.parse(userDataStr);
+      console.log('Using user data from initData:', { id: user.id, username: user.username });
+    } else {
+      user = userData;
+      console.log('Using fallback user data:', { id: user.id, username: user.username });
+    }
+    
+    const userId = user.id.toString();
+    
+    // Перевіряємо, чи є користувач адміністратором
+    const adminId = process.env.ADMIN_ID;
+    const userIsAdmin = isAdmin(userId);
+    
+    console.log('User role check:', { 
+      userId: userId, 
+      adminId: adminId,
+      isAdmin: userIsAdmin
+    });
+    
+    // Зберігаємо дані користувача в сесії
+    req.session.user = {
+      id: userId,
+      username: user.username || user.first_name,
+      photo_url: user.photo_url,
+      role: userIsAdmin ? 'admin' : 'user'
+    };
+    
+    console.log('User saved to session:', {
+      id: userId,
+      username: user.username || user.first_name,
+      role: userIsAdmin ? 'admin' : 'user'
+    });
+    
+    res.json({
+      success: true,
+      user: {
+        id: userId,
+        username: user.username || user.first_name,
+        photo_url: user.photo_url,
+        role: userIsAdmin ? 'admin' : 'user'
+      }
+    });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(500).json({ error: 'Authentication failed', details: error.message });
+  }
 });
 
 // Get complaints
