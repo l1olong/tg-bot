@@ -15,8 +15,20 @@ let userRole = 'user';
 
 // Add Telegram login handler
 window.onTelegramAuth = function(user) {
+    // Зберігаємо дані користувача
     currentUser.id = user.id.toString();
     currentUser.role = user.id.toString() === process.env.ADMIN_ID ? 'admin' : 'user';
+    
+    // Зберігаємо в localStorage для збереження між сесіями
+    localStorage.setItem('user', JSON.stringify({
+        id: currentUser.id,
+        role: currentUser.role,
+        username: user.username || user.first_name,
+        photo_url: user.photo_url
+    }));
+    
+    // Оновлюємо UI та список звернень
+    updateUI();
     updateFeedbackList();
 }
 
