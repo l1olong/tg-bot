@@ -9,6 +9,7 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const crypto = require('crypto');
 const tls = require('tls');
+const { validateTelegramWebAppData, isAdmin } = require('../controllers/controllers');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
@@ -61,22 +62,23 @@ app.use((req, res, next) => {
 
 // Authentication middleware
 const auth = (req, res, next) => {
-  // Allow public access to view complaints
+  // Дозволяємо публічний доступ до перегляду скарг
   if (req.method === 'GET' && req.path === '/api/complaints') {
     return next();
   }
 
+  // Перевіряємо авторизацію через заголовок або сесію
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+  if (token) {
+    req.user = { id: token };
+    return next();
+  } else if (req.session.user) {
+    req.user = req.session.user;
+    return next();
   }
-  req.user = { id: token };
-  next();
-};
-
-// Check if user is admin
-const isAdmin = (userId) => {
-  return userId === process.env.ADMIN_ID;
+  
+  // Якщо користувач не авторизований, повертаємо помилку
+  return res.status(401).json({ error: 'Authentication required' });
 };
 
 // Routes

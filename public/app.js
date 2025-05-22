@@ -13,6 +13,95 @@ let currentUser = {
 let isAuthenticated = false;
 let userRole = 'user';
 
+// Ініціалізація Telegram WebApp
+document.addEventListener('DOMContentLoaded', () => {
+    // Перевіряємо, чи запущений додаток в Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        console.log('Telegram WebApp detected');
+        
+        // Налаштовуємо WebApp
+        const webApp = window.Telegram.WebApp;
+        webApp.expand();
+        
+        // Отримуємо дані користувача з WebApp
+        const initData = webApp.initData;
+        
+        if (initData) {
+            console.log('Init data available, authenticating...');
+            authenticateWithTelegram(initData);
+        } else {
+            console.warn('No init data available from Telegram WebApp');
+        }
+    } else {
+        console.log('Not running in Telegram WebApp');
+        // Перевіряємо, чи є збережені дані користувача
+        initializeUserFromStorage();
+        initializeFilters();
+        loadComplaints();
+        checkAuthStatus();
+    }
+});
+
+// Функція для автентифікації через Telegram WebApp
+async function authenticateWithTelegram(initData) {
+    try {
+        const response = await fetch('/api/auth/telegram', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ initData }),
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.success && data.user) {
+                // Зберігаємо дані користувача
+                currentUser.id = data.user.id;
+                currentUser.role = data.user.role;
+                isAuthenticated = true;
+                userRole = data.user.role;
+                
+                // Зберігаємо в localStorage для збереження між сесіями
+                localStorage.setItem('user', JSON.stringify({
+                    id: data.user.id,
+                    username: data.user.username,
+                    photo_url: data.user.photo_url,
+                    role: data.user.role
+                }));
+                
+                console.log('Successfully authenticated with Telegram', {
+                    id: data.user.id,
+                    role: data.user.role
+                });
+                
+                // Оновлюємо UI та завантажуємо дані
+                updateUI();
+                loadComplaints();
+            }
+        } else {
+            const errorData = await response.json();
+            console.error('Authentication error:', errorData);
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Помилка автентифікації: ' + errorData.error 
+                    : 'Authentication error: ' + errorData.error,
+                'error'
+            );
+        }
+    } catch (error) {
+        console.error('Error during authentication:', error);
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Помилка під час автентифікації' 
+                : 'Error during authentication',
+            'error'
+        );
+    }
+}
+
 // Add Telegram login handler
 window.onTelegramAuth = function(user) {
     // Зберігаємо дані користувача
@@ -255,12 +344,6 @@ function initializeFilters() {
     document.getElementById('answeredFilter').addEventListener('change', filterAndDisplayComplaints);
     document.getElementById('sortOrder').addEventListener('change', filterAndDisplayComplaints);
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    initializeFilters();
-    loadComplaints();
-    checkAuthStatus();
-});
 
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
     e.preventDefault();
