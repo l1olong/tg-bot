@@ -177,17 +177,30 @@ app.post('/api/auth/telegram', (req, res) => {
 });
 
 // Get complaints
-app.get('/api/complaints', async (req, res) => {
+app.get('/api/complaints', auth, async (req, res) => {
   try {
     let query = {};
-    // If user is authenticated and not admin, only show their complaints
-    if (req.user && !isAdmin(req.user.id)) {
+    
+    // Перевіряємо роль користувача
+    const userIsAdmin = isAdmin(req.user.id);
+    console.log('User role check for complaints:', { 
+      userId: req.user.id, 
+      isAdmin: userIsAdmin 
+    });
+    
+    // Якщо користувач не адмін, показуємо тільки його звернення
+    if (!userIsAdmin) {
       query.userId = req.user.id;
+      console.log('Filtering complaints for user:', req.user.id);
+    } else {
+      console.log('Admin user, showing all complaints');
     }
 
     const complaints = await Complaint.find(query)
       .sort({ createdAt: -1 });
-
+    
+    console.log(`Found ${complaints.length} complaints for user`);
+    
     res.json(complaints);
   } catch (error) {
     console.error('Error fetching complaints:', error);

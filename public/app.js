@@ -296,6 +296,72 @@ function renderComplaint(complaint) {
 
 let allComplaints = [];
 
+async function loadComplaints() {
+    try {
+        console.log('Loading complaints with user role:', currentUser.role);
+        
+        // Перевіряємо, чи користувач авторизований
+        if (!currentUser.id) {
+            console.log('User not authenticated, showing login prompt');
+            const feedbackList = document.getElementById('feedbackList');
+            feedbackList.innerHTML = `
+                <div class="alert alert-warning">
+                    ${currentLanguage === 'ua' 
+                        ? 'Увійдіть через Telegram, щоб переглянути звернення' 
+                        : 'Please login with Telegram to view feedback'}
+                </div>
+            `;
+            return;
+        }
+        
+        // Показуємо індикатор завантаження
+        const feedbackList = document.getElementById('feedbackList');
+        feedbackList.innerHTML = `
+            <div class="d-flex justify-content-center my-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        
+        // Надсилаємо запит з авторизацією
+        const response = await fetch('/api/complaints', {
+            headers: {
+                'Authorization': `Bearer ${currentUser.id}`
+            },
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch complaints: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        allComplaints = data.complaints || data;
+        
+        console.log(`Loaded ${allComplaints.length} complaints, user role: ${currentUser.role}`);
+        
+        // Додаємо атрибут data-id до кожного звернення для подальшого використання
+        allComplaints.forEach(complaint => {
+            if (!complaint.id && complaint._id) {
+                complaint.id = complaint._id;
+            }
+        });
+        
+        filterAndDisplayComplaints();
+    } catch (error) {
+        console.error('Error loading complaints:', error);
+        const feedbackList = document.getElementById('feedbackList');
+        feedbackList.innerHTML = `
+            <div class="alert alert-danger">
+                ${currentLanguage === 'ua' 
+                    ? 'Помилка при завантаженні звернень: ' + error.message
+                    : 'Failed to load complaints: ' + error.message}
+            </div>
+        `;
+    }
+}
+
 function filterAndDisplayComplaints() {
     const complaintFilterChecked = document.getElementById('complaintFilter').checked;
     const suggestionFilterChecked = document.getElementById('suggestionFilter').checked;
@@ -328,26 +394,6 @@ function filterAndDisplayComplaints() {
     feedbackList.innerHTML = filteredComplaints
         .map(renderComplaint)
         .join('');
-}
-
-async function loadComplaints() {
-    try {
-        const response = await fetch('/api/complaints');
-        if (!response.ok) throw new Error('Failed to fetch complaints');
-        
-        const data = await response.json();
-        allComplaints = data.complaints || data;
-        
-        filterAndDisplayComplaints();
-    } catch (error) {
-        console.error('Error:', error);
-        const feedbackList = document.getElementById('feedbackList');
-        feedbackList.innerHTML = `<div class="alert alert-danger">${
-            currentLanguage === 'ua' 
-                ? 'Помилка при завантаженні звернень' 
-                : 'Failed to load complaints'
-        }</div>`;
-    }
 }
 
 async function updateFeedbackList() {
@@ -588,4 +634,40 @@ function showToast(message, type = 'success', duration = 4000) {
             document.body.removeChild(toast);
         }, 300); // Час анімації зникнення
     }, duration);
+}
+
+// Функція для ініціалізації даних користувача з localStorage
+function initializeUserFromStorage() {
+    console.log('Initializing user from localStorage');
+    
+    try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            console.log('Found stored user data:', userData);
+            
+            // Оновлюємо дані поточного користувача
+            currentUser.id = userData.id;
+            currentUser.role = userData.role || 'user';
+            
+            // Оновлюємо глобальні змінні для сумісності зі старим кодом
+            isAuthenticated = true;
+            userRole = currentUser.role;
+            
+            console.log('User initialized from storage:', {
+                id: currentUser.id,
+                role: currentUser.role
+            });
+            
+            // Оновлюємо UI
+            updateUI();
+            return true;
+        } else {
+            console.log('No stored user data found');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error initializing user from storage:', error);
+        return false;
+    }
 }
