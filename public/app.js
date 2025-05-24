@@ -15,52 +15,96 @@ let userRole = 'user';
 
 // Ініціалізація Telegram WebApp
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing application');
+    
     // Перевіряємо, чи запущений додаток в Telegram WebApp
     if (window.Telegram && window.Telegram.WebApp) {
         console.log('Telegram WebApp detected');
         
-        // Виводимо дані Telegram WebApp для дебагу
-        console.log('WebApp initData:', window.Telegram.WebApp.initData);
-        console.log('WebApp initDataUnsafe:', window.Telegram.WebApp.initDataUnsafe);
-        
-        // Якщо є дані користувача, виводимо їх
-        if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-            const user = window.Telegram.WebApp.initDataUnsafe.user;
-            console.log('Telegram user data:', {
-                id: user.id,
-                username: user.username,
-                first_name: user.first_name,
-                last_name: user.last_name
-            });
-        }
-        
         // Налаштовуємо WebApp
         const webApp = window.Telegram.WebApp;
-        webApp.expand();
+        webApp.ready(); // Повідомляємо Telegram, що додаток готовий
+        webApp.expand(); // Розгортаємо додаток на весь екран
         
-        // Отримуємо дані користувача з WebApp
-        const initData = webApp.initData;
+        // Виводимо дані Telegram WebApp для дебагу
+        console.log('WebApp initData:', webApp.initData);
+        console.log('WebApp initDataUnsafe:', webApp.initDataUnsafe);
         
-        if (initData) {
-            console.log('Init data available, authenticating...');
-            authenticateWithTelegram(initData);
+        // Перевіряємо наявність даних користувача
+        if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
+            const telegramUser = webApp.initDataUnsafe.user;
+            console.log('Telegram user data:', {
+                id: telegramUser.id,
+                username: telegramUser.username,
+                first_name: telegramUser.first_name,
+                last_name: telegramUser.last_name
+            });
+            
+            // Автоматично авторизуємо користувача
+            authenticateWithTelegramUser(telegramUser, webApp.initData);
         } else {
-            console.warn('No init data available from Telegram WebApp');
-            // Додаємо елемент для відображення помилки
-            const debugInfo = document.createElement('div');
-            debugInfo.className = 'alert alert-warning';
-            debugInfo.innerHTML = 'Telegram WebApp initData is empty. Authentication may fail.';
-            document.body.prepend(debugInfo);
+            console.warn('No user data available from Telegram WebApp');
+            showTelegramRequiredMessage();
         }
     } else {
-        console.log('Not running in Telegram WebApp');
-        // Перевіряємо, чи є збережені дані користувача
-        initializeUserFromStorage();
-        initializeFilters();
-        loadComplaints();
-        checkAuthStatus();
+        console.warn('Not running in Telegram WebApp');
+        showTelegramRequiredMessage();
+        
+        // Для розробки: перевіряємо, чи є збережені дані користувача
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Development mode: checking for stored user data');
+            if (initializeUserFromStorage()) {
+                console.log('User initialized from storage in development mode');
+                initializeFilters();
+                loadComplaints();
+            }
+        }
     }
 });
+
+// Функція для відображення повідомлення про необхідність відкрити через Telegram
+function showTelegramRequiredMessage() {
+    console.log('Showing Telegram required message');
+    
+    // Приховуємо основний контент
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) {
+        mainContent.style.display = 'none';
+    }
+    
+    // Показуємо повідомлення
+    let telegramRequiredMsg = document.getElementById('telegramRequiredMsg');
+    
+    if (!telegramRequiredMsg) {
+        telegramRequiredMsg = document.createElement('div');
+        telegramRequiredMsg.id = 'telegramRequiredMsg';
+        telegramRequiredMsg.className = 'container mt-5 text-center';
+        telegramRequiredMsg.innerHTML = `
+            <div class="alert alert-warning p-5">
+                <h4 class="alert-heading mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${currentLanguage === 'ua' ? 'Потрібен Telegram' : 'Telegram Required'}
+                </h4>
+                <p>${currentLanguage === 'ua' 
+                    ? 'Будь ласка, відкрийте цей додаток через Telegram.' 
+                    : 'Please open this application through Telegram.'}
+                </p>
+                <hr>
+                <p class="mb-0">
+                    ${currentLanguage === 'ua' 
+                        ? 'Цей додаток працює тільки як міні-додаток всередині Telegram.' 
+                        : 'This application works only as a mini app inside Telegram.'}
+                </p>
+                <div class="mt-4">
+                    <img src="https://telegram.org/img/t_logo.svg" alt="Telegram Logo" width="64" height="64">
+                </div>
+            </div>
+        `;
+        document.body.appendChild(telegramRequiredMsg);
+    } else {
+        telegramRequiredMsg.style.display = 'block';
+    }
+}
 
 // Функція для автентифікації через Telegram WebApp
 async function authenticateWithTelegram(initData) {

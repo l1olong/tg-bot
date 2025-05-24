@@ -81,6 +81,77 @@ const auth = (req, res, next) => {
   return res.status(401).json({ error: 'Authentication required' });
 };
 
+// Маршрут для автентифікації через Telegram WebApp
+app.post('/api/auth', (req, res) => {
+  try {
+    const { telegramUser, initData } = req.body;
+    
+    console.log('Received auth request:', { 
+      telegramUser: telegramUser ? { id: telegramUser.id, username: telegramUser.username } : null,
+      initDataLength: initData ? initData.length : 0
+    });
+    
+    // Перевіряємо наявність даних користувача
+    if (!telegramUser || !telegramUser.id) {
+      console.error('Missing or invalid telegramUser in request');
+      return res.status(400).json({ error: 'Missing or invalid user data' });
+    }
+    
+    // Валідуємо дані Telegram WebApp, якщо вони є
+    let isValidData = true;
+    if (initData) {
+      isValidData = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
+      console.log('Telegram data validation result:', isValidData);
+      
+      if (!isValidData && process.env.NODE_ENV === 'production') {
+        console.error('Invalid Telegram data signature');
+        return res.status(401).json({ error: 'Invalid Telegram data' });
+      }
+    } else {
+      console.warn('No initData provided, skipping validation');
+    }
+    
+    const userId = telegramUser.id.toString();
+    
+    // Перевіряємо, чи є користувач адміністратором
+    const adminId = process.env.ADMIN_ID;
+    const userIsAdmin = isAdmin(userId);
+    
+    console.log('User role check:', { 
+      userId: userId, 
+      adminId: adminId,
+      isAdmin: userIsAdmin
+    });
+    
+    // Зберігаємо дані користувача в сесії
+    req.session.user = {
+      id: userId,
+      username: telegramUser.username || telegramUser.first_name,
+      photo_url: telegramUser.photo_url,
+      role: userIsAdmin ? 'admin' : 'user'
+    };
+    
+    console.log('User saved to session:', {
+      id: userId,
+      username: telegramUser.username || telegramUser.first_name,
+      role: userIsAdmin ? 'admin' : 'user'
+    });
+    
+    res.json({
+      success: true,
+      user: {
+        id: userId,
+        username: telegramUser.username || telegramUser.first_name,
+        photo_url: telegramUser.photo_url,
+        role: userIsAdmin ? 'admin' : 'user'
+      }
+    });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(500).json({ error: 'Authentication failed', details: error.message });
+  }
+});
+
 // Routes
 app.get('/api/user', (req, res) => {
   if (req.session.user) {
