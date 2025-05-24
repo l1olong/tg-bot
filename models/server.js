@@ -9,7 +9,7 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const crypto = require('crypto');
 const tls = require('tls');
-//const { validateTelegramWebAppData, isAdmin } = require('../controllers/controllers');
+const { validateTelegramWebAppData, isAdmin } = require('../controllers/controllers');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
