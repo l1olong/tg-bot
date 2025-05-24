@@ -252,17 +252,22 @@ app.get('/api/complaints', auth, async (req, res) => {
   try {
     let query = {};
     
+    // Отримуємо userId з параметрів запиту або з об'єкта користувача
+    const requestUserId = req.query.userId || (req.user && req.user.id);
+    
     // Перевіряємо роль користувача
-    const userIsAdmin = isAdmin(req.user.id);
+    const userIsAdmin = isAdmin(requestUserId);
     console.log('User role check for complaints:', { 
-      userId: req.user.id, 
-      isAdmin: userIsAdmin 
+      requestUserId: requestUserId, 
+      isAdmin: userIsAdmin,
+      queryUserId: req.query.userId,
+      userFromSession: req.user ? req.user.id : null
     });
     
     // Якщо користувач не адмін, показуємо тільки його звернення
     if (!userIsAdmin) {
-      query.userId = req.user.id;
-      console.log('Filtering complaints for user:', req.user.id);
+      query.userId = requestUserId;
+      console.log('Filtering complaints for user:', requestUserId);
     } else {
       console.log('Admin user, showing all complaints');
     }

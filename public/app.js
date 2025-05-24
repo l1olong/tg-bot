@@ -13,6 +13,9 @@ let currentUser = {
 let isAuthenticated = false;
 let userRole = 'user';
 
+// Глобальна змінна для зберігання даних користувача Telegram
+window.tgUser = null;
+
 // Ініціалізація Telegram WebApp
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing application');
@@ -30,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Отримуємо дані користувача
     const user = telegram?.initDataUnsafe?.user;
+    
+    // Зберігаємо дані користувача у глобальну змінну
+    window.tgUser = user;
+    console.log('Saved Telegram user to global variable:', window.tgUser);
     
     if (!user) {
         // Користувач відкрив додаток НЕ через Telegram
@@ -458,11 +465,39 @@ function initializeFilters() {
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Перевіряємо наявність авторизації
+    const userId = window.tgUser?.id || currentUser.id;
+    
+    if (!userId) {
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Будь ласка, увійдіть через Telegram, щоб надсилати звернення' 
+                : 'Please login with Telegram to submit feedback',
+            'warning'
+        );
+        return;
+    }
+    
+    console.log('Submitting feedback with user data:', {
+        currentUser: currentUser,
+        tgUser: window.tgUser,
+        userId: userId
+    });
+
+    // Показуємо індикатор завантаження
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = `
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Submitting...'}
+    `;
+
     const formData = {
         type: document.getElementById('type').value,
         message: document.getElementById('message').value,
         contactInfo: document.getElementById('contactInfo').value || 'Anonymous',
-        userId: currentUser.id
+        userId: userId // Використовуємо ID користувача Telegram
     };
 
     try {
@@ -470,32 +505,55 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentUser.id}`
+                'Authorization': `Bearer ${userId}` // Використовуємо ID користувача Telegram
             },
             body: JSON.stringify(formData)
         });
 
+        // Відновлюємо кнопку
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+
         if (response.ok) {
             document.getElementById('feedbackForm').reset();
+            
+            // Оновлюємо список звернень з передачею userId
             updateFeedbackList();
-            alert(
+            
+            // Показуємо повідомлення про успіх
+            showToast(
                 currentLanguage === 'ua' 
                     ? 'Звернення успішно надіслано!' 
-                    : 'Feedback submitted successfully!'
+                    : 'Feedback submitted successfully!',
+                'success'
             );
         } else {
-            alert(
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { error: 'Unknown error' };
+            }
+            
+            showToast(
                 currentLanguage === 'ua' 
-                    ? 'Помилка при надсиланні звернення' 
-                    : 'Error submitting feedback'
+                    ? 'Помилка при надсиланні звернення: ' + (errorData.error || 'невідома помилка')
+                    : 'Error submitting feedback: ' + (errorData.error || 'unknown error'),
+                'error'
             );
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert(
+        console.error('Error submitting feedback:', error);
+        
+        // Відновлюємо кнопку
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+        
+        showToast(
             currentLanguage === 'ua' 
-                ? 'Помилка при надсиланні звернення' 
-                : 'Error submitting feedback'
+                ? 'Помилка при надсиланні звернення: ' + error.message
+                : 'Error submitting feedback: ' + error.message,
+            'error'
         );
     }
 });
