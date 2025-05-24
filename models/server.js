@@ -195,13 +195,13 @@ app.post('/api/auth/telegram', (req, res) => {
     }
     
     // Валідуємо дані Telegram WebApp
-    const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
+    /*const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
     console.log('Telegram data validation result:', isValid);
     
     if (!isValid && process.env.NODE_ENV === 'production') {
       console.error('Invalid Telegram data signature');
       return res.status(401).json({ error: 'Invalid Telegram data' });
-    }
+    }*/
     
     // Парсимо дані користувача з initData
     const params = new URLSearchParams(initData);

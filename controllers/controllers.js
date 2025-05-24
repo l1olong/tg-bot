@@ -21,7 +21,7 @@ function getMainKeyboard(lang) {
 }
 
 // Функція для валідації даних Telegram WebApp
-function validateTelegramWebAppData(initData, botToken) {
+/*function validateTelegramWebAppData(initData, botToken) {
   // Розділяємо initData на параметри та хеш
   const params = new URLSearchParams(initData);
   const hash = params.get('hash');
@@ -44,7 +44,7 @@ function validateTelegramWebAppData(initData, botToken) {
   
   // Порівнюємо обчислений хеш з отриманим
   return calculatedHash === hash;
-}
+}*/
 
 // Функція для перевірки, чи є користувач адміністратором
 function isAdmin(userId) {
@@ -53,6 +53,6 @@ function isAdmin(userId) {
 
 module.exports = {
   getMainKeyboard,
-  validateTelegramWebAppData,
-  isAdmin
+  /*validateTelegramWebAppData,
+  isAdmin*/
 };
