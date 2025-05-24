@@ -87,7 +87,10 @@ app.post('/api/auth', (req, res) => {
     const { telegramUser, initData } = req.body;
     
     console.log('Received auth request:', { 
-      telegramUser: telegramUser ? { id: telegramUser.id, username: telegramUser.username } : null,
+      telegramUser: telegramUser ? { 
+        id: telegramUser.id, 
+        username: telegramUser.username || telegramUser.first_name 
+      } : null,
       initDataLength: initData ? initData.length : 0
     });
     
@@ -100,15 +103,27 @@ app.post('/api/auth', (req, res) => {
     // Валідуємо дані Telegram WebApp, якщо вони є
     let isValidData = true;
     if (initData) {
-      isValidData = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
-      console.log('Telegram data validation result:', isValidData);
+      try {
+        isValidData = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
+        console.log('Telegram data validation result:', isValidData);
+      } catch (validationError) {
+        console.error('Error validating Telegram data:', validationError);
+        isValidData = false;
+      }
       
+      // У виробничому середовищі вимагаємо валідні дані
+      // У розробці дозволяємо тестування без валідації
       if (!isValidData && process.env.NODE_ENV === 'production') {
         console.error('Invalid Telegram data signature');
         return res.status(401).json({ error: 'Invalid Telegram data' });
       }
     } else {
       console.warn('No initData provided, skipping validation');
+      // У виробничому середовищі вимагаємо initData
+      if (process.env.NODE_ENV === 'production') {
+        console.error('Missing initData in production environment');
+        return res.status(400).json({ error: 'Missing Telegram initialization data' });
+      }
     }
     
     const userId = telegramUser.id.toString();
@@ -128,7 +143,8 @@ app.post('/api/auth', (req, res) => {
       id: userId,
       username: telegramUser.username || telegramUser.first_name,
       photo_url: telegramUser.photo_url,
-      role: userIsAdmin ? 'admin' : 'user'
+      role: userIsAdmin ? 'admin' : 'user',
+      auth_time: new Date().toISOString()
     };
     
     console.log('User saved to session:', {

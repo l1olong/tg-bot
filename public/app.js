@@ -20,51 +20,84 @@ window.tgUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing application');
     
+    // Додаємо затримку для гарантії завантаження Telegram WebApp
+    setTimeout(() => {
+        initializeTelegramWebApp();
+    }, 500);
+});
+
+// Функція для ініціалізації Telegram WebApp
+function initializeTelegramWebApp() {
     // Отримуємо об'єкт Telegram WebApp
     const telegram = window.Telegram?.WebApp;
     
-    // Повідомляємо Telegram, що додаток готовий
-    telegram?.ready();
-    
     // Виводимо діагностичну інформацію
     console.log('Telegram WebApp object:', telegram);
-    console.log('initDataUnsafe:', telegram?.initDataUnsafe);
-    console.log('user:', telegram?.initDataUnsafe?.user);
+    console.log('Telegram WebApp available:', !!telegram);
+    
+    // Перевіряємо наявність об'єкта Telegram WebApp
+    if (!telegram) {
+        console.error('Telegram WebApp is not available');
+        
+        // Перевіряємо, чи є збережені дані користувача
+        if (initializeUserFromStorage()) {
+            console.log('User initialized from storage, continuing without Telegram WebApp');
+            initializeFilters();
+            loadComplaints();
+        } else {
+            showTelegramRequiredMessage();
+        }
+        return;
+    }
+    
+    // Повідомляємо Telegram, що додаток готовий
+    try {
+        telegram.ready();
+        console.log('Telegram WebApp ready() called successfully');
+    } catch (error) {
+        console.error('Error calling Telegram WebApp ready():', error);
+    }
+    
+    // Виводимо діагностичну інформацію про дані користувача
+    console.log('initDataUnsafe:', telegram.initDataUnsafe);
+    console.log('user from initDataUnsafe:', telegram.initDataUnsafe?.user);
     
     // Отримуємо дані користувача
-    const user = telegram?.initDataUnsafe?.user;
+    const user = telegram.initDataUnsafe?.user;
     
     // Зберігаємо дані користувача у глобальну змінну
     window.tgUser = user;
     console.log('Saved Telegram user to global variable:', window.tgUser);
     
+    // Перевіряємо наявність даних користувача
     if (!user) {
-        // Користувач відкрив додаток НЕ через Telegram
-        console.warn('User not authenticated through Telegram WebApp');
+        console.warn('User data not found in Telegram WebApp');
         
-        // Показуємо повідомлення про необхідність відкрити через Telegram
-        showTelegramRequiredMessage();
-        
-        // Для розробки: перевіряємо, чи є збережені дані користувача
-        if (process.env.NODE_ENV !== 'production') {
-            console.log('Development mode: checking for stored user data');
-            if (initializeUserFromStorage()) {
-                console.log('User initialized from storage in development mode');
-                initializeFilters();
-                loadComplaints();
-            }
+        // Спроба отримати дані з localStorage
+        if (initializeUserFromStorage()) {
+            console.log('User initialized from storage, continuing without Telegram user data');
+            initializeFilters();
+            loadComplaints();
+        } else {
+            // Показуємо повідомлення про необхідність відкрити через Telegram
+            showTelegramRequiredMessage();
         }
     } else {
         // Користувач авторизований через Telegram
         console.log("🔐 Користувач авторизований через Telegram:", user);
         
         // Розгортаємо додаток на весь екран
-        telegram.expand();
+        try {
+            telegram.expand();
+            console.log('Telegram WebApp expand() called successfully');
+        } catch (error) {
+            console.error('Error calling Telegram WebApp expand():', error);
+        }
         
         // Автоматично авторизуємо користувача
         authenticateWithTelegramUser(user, telegram.initData);
     }
-});
+}
 
 // Функція для відображення повідомлення про необхідність відкрити через Telegram
 function showTelegramRequiredMessage() {
@@ -223,7 +256,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
                 'error'
             );
             
-            // Показуємо повідомлення про необхідність Telegram
+            // Показуємо повідомлення про необхідність відкрити через Telegram
             showTelegramRequiredMessage();
         }
     } catch (error) {
@@ -235,7 +268,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
             'error'
         );
         
-        // Показуємо повідомлення про необхідність Telegram
+        // Показуємо повідомлення про необхідність відкрити через Telegram
         showTelegramRequiredMessage();
     }
 }
