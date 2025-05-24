@@ -58,6 +58,10 @@ function initializeTelegramWebApp() {
         console.error('Error calling Telegram WebApp ready():', error);
     }
     
+    // Отримуємо initData (важливо для валідації на сервері)
+    const initData = telegram.initData;
+    console.log('initData:', initData ? 'Present (length: ' + initData.length + ')' : 'Not available');
+    
     // Виводимо діагностичну інформацію про дані користувача
     console.log('initDataUnsafe:', telegram.initDataUnsafe);
     console.log('user from initDataUnsafe:', telegram.initDataUnsafe?.user);
@@ -95,7 +99,7 @@ function initializeTelegramWebApp() {
         }
         
         // Автоматично авторизуємо користувача
-        authenticateWithTelegramUser(user, telegram.initData);
+        authenticateWithTelegramUser(user, initData);
     }
 }
 
