@@ -9,7 +9,7 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const crypto = require('crypto');
 const tls = require('tls');
-const { validateTelegramWebAppData, isAdmin } = require('../controllers/controllers');
+//const { validateTelegramWebAppData, isAdmin } = require('../controllers/controllers');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
@@ -412,7 +412,7 @@ startServer();
 module.exports = { updateClients: () => io.emit('update') };
 
 // Функція для валідації даних Telegram WebApp
-function validateTelegramWebAppData(initData, botToken) {
+/*function validateTelegramWebAppData(initData, botToken) {
   try {
     console.log('Validating Telegram WebApp data...');
     
@@ -468,4 +468,4 @@ function validateTelegramWebAppData(initData, botToken) {
     console.error('Error validating Telegram data:', error);
     return false;
   }
-}
+}*/
