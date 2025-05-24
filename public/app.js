@@ -110,17 +110,44 @@ function showTelegramRequiredMessage() {
     }
 }
 
-// Функція для автентифікації через Telegram WebApp
-async function authenticateWithTelegram(initData) {
+// Функція для автентифікації з даними користувача Telegram
+async function authenticateWithTelegramUser(telegramUser, initData) {
+    console.log('Authenticating with Telegram user data:', {
+        id: telegramUser.id,
+        username: telegramUser.username || telegramUser.first_name
+    });
+    
     try {
-        const response = await fetch('/api/auth/telegram', {
+        // Показуємо індикатор завантаження
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'authLoadingIndicator';
+        loadingIndicator.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center';
+        loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+        loadingIndicator.style.zIndex = '9999';
+        loadingIndicator.innerHTML = `
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        `;
+        document.body.appendChild(loadingIndicator);
+        
+        // Надсилаємо запит на авторизацію
+        const response = await fetch('/api/auth', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ initData }),
+            body: JSON.stringify({ 
+                telegramUser,
+                initData
+            }),
             credentials: 'include'
         });
+        
+        // Видаляємо індикатор завантаження
+        if (loadingIndicator && loadingIndicator.parentNode) {
+            document.body.removeChild(loadingIndicator);
+        }
         
         if (response.ok) {
             const data = await response.json();
@@ -132,41 +159,84 @@ async function authenticateWithTelegram(initData) {
                 isAuthenticated = true;
                 userRole = data.user.role;
                 
+                // Переконуємося, що window.tgUser завжди містить актуальні дані
+                if (!window.tgUser || window.tgUser.id !== telegramUser.id) {
+                    window.tgUser = telegramUser;
+                    console.log('Updated window.tgUser with current Telegram user data');
+                }
+                
                 // Зберігаємо в localStorage для збереження між сесіями
-                localStorage.setItem('user', JSON.stringify({
+                const userDataToStore = {
                     id: data.user.id,
-                    username: data.user.username,
-                    photo_url: data.user.photo_url,
-                    role: data.user.role
-                }));
+                    username: data.user.username || telegramUser.first_name,
+                    photo_url: data.user.photo_url || telegramUser.photo_url,
+                    role: data.user.role,
+                    auth_time: new Date().toISOString() // Додаємо час автентифікації
+                };
+                
+                localStorage.setItem('user', JSON.stringify(userDataToStore));
+                console.log('User data saved to localStorage:', userDataToStore);
                 
                 console.log('Successfully authenticated with Telegram', {
                     id: data.user.id,
                     role: data.user.role
                 });
                 
+                // Показуємо основний контент
+                const mainContent = document.getElementById('mainContent');
+                if (mainContent) {
+                    mainContent.style.display = 'block';
+                }
+                
+                // Приховуємо повідомлення про Telegram, якщо воно є
+                const telegramRequiredMsg = document.getElementById('telegramRequiredMsg');
+                if (telegramRequiredMsg) {
+                    telegramRequiredMsg.style.display = 'none';
+                }
+                
                 // Оновлюємо UI та завантажуємо дані
                 updateUI();
+                initializeFilters();
                 loadComplaints();
+                
+                // Показуємо повідомлення про успішну авторизацію
+                showToast(
+                    currentLanguage === 'ua' 
+                        ? 'Успішна авторизація через Telegram' 
+                        : 'Successfully authenticated with Telegram',
+                    'success'
+                );
             }
         } else {
-            const errorData = await response.json();
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { error: 'Unknown error' };
+            }
+            
             console.error('Authentication error:', errorData);
             showToast(
                 currentLanguage === 'ua' 
-                    ? 'Помилка автентифікації: ' + errorData.error 
-                    : 'Authentication error: ' + errorData.error,
+                    ? 'Помилка автентифікації: ' + (errorData.error || 'невідома помилка')
+                    : 'Authentication error: ' + (errorData.error || 'unknown error'),
                 'error'
             );
+            
+            // Показуємо повідомлення про необхідність Telegram
+            showTelegramRequiredMessage();
         }
     } catch (error) {
         console.error('Error during authentication:', error);
         showToast(
             currentLanguage === 'ua' 
-                ? 'Помилка під час автентифікації' 
-                : 'Error during authentication',
+                ? 'Помилка під час автентифікації: ' + error.message
+                : 'Error during authentication: ' + error.message,
             'error'
         );
+        
+        // Показуємо повідомлення про необхідність Telegram
+        showTelegramRequiredMessage();
     }
 }
 
@@ -445,6 +515,11 @@ function filterAndDisplayComplaints() {
 }
 
 async function updateFeedbackList() {
+    console.log('Updating feedback list with user data:', {
+        currentUser: currentUser,
+        tgUser: window.tgUser
+    });
+    
     await loadComplaints();
 }
 
@@ -517,7 +592,15 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         if (response.ok) {
             document.getElementById('feedbackForm').reset();
             
-            // Оновлюємо список звернень з передачею userId
+            // Переконуємося, що дані користувача збережені перед оновленням списку
+            if (!window.tgUser && userId) {
+                // Якщо з якоїсь причини window.tgUser відсутній, але userId є,
+                // створюємо мінімальний об'єкт користувача
+                window.tgUser = { id: userId };
+                console.log('Recreated tgUser before updating feedback list:', window.tgUser);
+            }
+            
+            // Оновлюємо список звернень
             updateFeedbackList();
             
             // Показуємо повідомлення про успіх
