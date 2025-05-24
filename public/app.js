@@ -17,37 +17,25 @@ let userRole = 'user';
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing application');
     
-    // Перевіряємо, чи запущений додаток в Telegram WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
-        console.log('Telegram WebApp detected');
+    // Отримуємо об'єкт Telegram WebApp
+    const telegram = window.Telegram?.WebApp;
+    
+    // Повідомляємо Telegram, що додаток готовий
+    telegram?.ready();
+    
+    // Виводимо діагностичну інформацію
+    console.log('Telegram WebApp object:', telegram);
+    console.log('initDataUnsafe:', telegram?.initDataUnsafe);
+    console.log('user:', telegram?.initDataUnsafe?.user);
+    
+    // Отримуємо дані користувача
+    const user = telegram?.initDataUnsafe?.user;
+    
+    if (!user) {
+        // Користувач відкрив додаток НЕ через Telegram
+        console.warn('User not authenticated through Telegram WebApp');
         
-        // Налаштовуємо WebApp
-        const webApp = window.Telegram.WebApp;
-        webApp.ready(); // Повідомляємо Telegram, що додаток готовий
-        webApp.expand(); // Розгортаємо додаток на весь екран
-        
-        // Виводимо дані Telegram WebApp для дебагу
-        console.log('WebApp initData:', webApp.initData);
-        console.log('WebApp initDataUnsafe:', webApp.initDataUnsafe);
-        
-        // Перевіряємо наявність даних користувача
-        if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
-            const telegramUser = webApp.initDataUnsafe.user;
-            console.log('Telegram user data:', {
-                id: telegramUser.id,
-                username: telegramUser.username,
-                first_name: telegramUser.first_name,
-                last_name: telegramUser.last_name
-            });
-            
-            // Автоматично авторизуємо користувача
-            authenticateWithTelegramUser(telegramUser, webApp.initData);
-        } else {
-            console.warn('No user data available from Telegram WebApp');
-            showTelegramRequiredMessage();
-        }
-    } else {
-        console.warn('Not running in Telegram WebApp');
+        // Показуємо повідомлення про необхідність відкрити через Telegram
         showTelegramRequiredMessage();
         
         // Для розробки: перевіряємо, чи є збережені дані користувача
@@ -59,6 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadComplaints();
             }
         }
+    } else {
+        // Користувач авторизований через Telegram
+        console.log("🔐 Користувач авторизований через Telegram:", user);
+        
+        // Розгортаємо додаток на весь екран
+        telegram.expand();
+        
+        // Автоматично авторизуємо користувача
+        authenticateWithTelegramUser(user, telegram.initData);
     }
 });
 
@@ -86,8 +83,8 @@ function showTelegramRequiredMessage() {
                     ${currentLanguage === 'ua' ? 'Потрібен Telegram' : 'Telegram Required'}
                 </h4>
                 <p>${currentLanguage === 'ua' 
-                    ? 'Будь ласка, відкрийте цей додаток через Telegram.' 
-                    : 'Please open this application through Telegram.'}
+                    ? 'Будь ласка, відкрийте цей додаток через Telegram, натиснувши відповідну кнопку у боті.' 
+                    : 'Please open this application through Telegram by clicking the appropriate button in the bot.'}
                 </p>
                 <hr>
                 <p class="mb-0">
@@ -399,8 +396,8 @@ async function loadComplaints() {
         feedbackList.innerHTML = `
             <div class="alert alert-danger">
                 ${currentLanguage === 'ua' 
-                    ? 'Помилка при завантаженні звернень: ' + error.message
-                    : 'Failed to load complaints: ' + error.message}
+                    ? 'Помилка при завантаженні звернень' 
+                    : 'Failed to load complaints'}
             </div>
         `;
     }
