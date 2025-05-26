@@ -7,37 +7,37 @@ const crypto = require('crypto');
  * @returns {boolean} - Результат валідації
  */
 function validateTelegramWebAppData(initData, botToken) {
-    try {
-      const urlParams = new URLSearchParams(initData);
-      const hash = urlParams.get('hash');
-  
-      // Видаляємо hash з параметрів
-      urlParams.delete('hash');
-  
-      // Сортуємо параметри за ключем
-      const sortedParams = [...urlParams.entries()].sort(([a], [b]) => a.localeCompare(b));
-  
-      // Формуємо dataCheckString без hash
-      const dataCheckString = sortedParams.map(([key, value]) => `${key}=${value}`).join('\n');
-  
-      // Обчислюємо HMAC
-      const secretKey = crypto.createHash('sha256').update(botToken).digest();
-      const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-  
-      const isValid = hmac === hash;
-  
-      console.log('✅ Sorted dataCheckString:\n', dataCheckString);
-      console.log('✅ Generated HMAC:', hmac);
-      console.log('✅ Received hash:', hash);
-      console.log('✅ Validation result:', isValid);
-  
-      return isValid;
-    } catch (err) {
-      console.error('❌ Error validating Telegram WebApp data:', err);
-      return false;
-    }
+  try {
+    const urlParams = new URLSearchParams(initData);
+    const hash = urlParams.get('hash');
+
+    // Видаляємо hash з параметрів
+    urlParams.delete('hash');
+
+    // Сортуємо параметри за ключем
+    const sortedParams = [...urlParams.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+    // Формуємо dataCheckString без hash
+    const dataCheckString = sortedParams.map(([key, value]) => `${key}=${value}`).join('\n');
+
+    // Обчислюємо HMAC
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+    const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+    const isValid = hmac === hash;
+
+    console.log('✅ Sorted dataCheckString:\n', dataCheckString);
+    console.log('✅ Generated HMAC:', hmac);
+    console.log('✅ Received hash:', hash);
+    console.log('✅ Validation result:', isValid);
+
+    return isValid;
+  } catch (err) {
+    console.error('❌ Error validating Telegram WebApp data:', err);
+    return false;
   }
-  
+}
+
 /**
  * Допоміжна функція для валідації одного варіанту initData
  * @param {string} initData - Рядок ініціалізації з Telegram WebApp
