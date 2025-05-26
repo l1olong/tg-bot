@@ -62,31 +62,22 @@ function validateSingleInitData(initData, botToken) {
         return false;
       }
   
-      // Видаляємо 'hash' з параметрів
       urlParams.delete('hash');
   
-      // Вручну збираємо data_check_string БЕЗ декодування значень
-      const rawParams = initData
-        .split('&')
-        .filter(pair => !pair.startsWith('hash='))
-        .sort((a, b) => {
-          const keyA = a.split('=')[0];
-          const keyB = b.split('=')[0];
-          return keyA.localeCompare(keyB);
-        });
+      // Отримуємо всі пари ключ-значення
+      const sortedParams = Array.from(urlParams.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n'); // не додаємо signature сюди!
   
-      const dataCheckString = rawParams.join('\n');
+      console.log('Data string for validation:', sortedParams);
   
-      console.log('Data string for validation:', dataCheckString);
-  
-      // Створюємо секретний ключ
       const secretKey = crypto.createHash('sha256')
         .update(botToken)
         .digest();
   
-      // Створюємо HMAC
       const hmac = crypto.createHmac('sha256', secretKey)
-        .update(dataCheckString)
+        .update(sortedParams)
         .digest('hex');
   
       console.log('Generated HMAC:', hmac);
@@ -97,6 +88,6 @@ function validateSingleInitData(initData, botToken) {
       console.error('Error in validateSingleInitData:', error);
       return false;
     }
-  }
+  }  
   
 module.exports = validateTelegramWebAppData;
