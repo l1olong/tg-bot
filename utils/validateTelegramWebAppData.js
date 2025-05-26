@@ -53,45 +53,50 @@ function validateTelegramWebAppData(initData, botToken) {
  * @returns {boolean} - Результат валідації
  */
 function validateSingleInitData(initData, botToken) {
-  try {
-    // Розбираємо initData як query string
-    const urlParams = new URLSearchParams(initData);
-    const hash = urlParams.get('hash');
-    
-    if (!hash) {
-      console.error('No hash found in initData');
+    try {
+      const urlParams = new URLSearchParams(initData);
+      const hash = urlParams.get('hash');
+  
+      if (!hash) {
+        console.error('No hash found in initData');
+        return false;
+      }
+  
+      // Видаляємо 'hash' з параметрів
+      urlParams.delete('hash');
+  
+      // Вручну збираємо data_check_string БЕЗ декодування значень
+      const rawParams = initData
+        .split('&')
+        .filter(pair => !pair.startsWith('hash='))
+        .sort((a, b) => {
+          const keyA = a.split('=')[0];
+          const keyB = b.split('=')[0];
+          return keyA.localeCompare(keyB);
+        });
+  
+      const dataCheckString = rawParams.join('\n');
+  
+      console.log('Data string for validation:', dataCheckString);
+  
+      // Створюємо секретний ключ
+      const secretKey = crypto.createHash('sha256')
+        .update(botToken)
+        .digest();
+  
+      // Створюємо HMAC
+      const hmac = crypto.createHmac('sha256', secretKey)
+        .update(dataCheckString)
+        .digest('hex');
+  
+      console.log('Generated HMAC:', hmac);
+      console.log('Received hash:', hash);
+  
+      return hmac === hash;
+    } catch (error) {
+      console.error('Error in validateSingleInitData:', error);
       return false;
     }
-    
-    // Видаляємо hash з параметрів для перевірки
-    urlParams.delete('hash');
-    
-    // Сортуємо параметри за ключем
-    const params = Array.from(urlParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    
-    console.log('Data string for validation:', params);
-    
-    // Створюємо HMAC-SHA-256 хеш
-    const secretKey = crypto.createHash('sha256')
-      .update(botToken)
-      .digest();
-    
-    const hmac = crypto.createHmac('sha256', secretKey)
-      .update(params)
-      .digest('hex');
-    
-    console.log('Generated HMAC:', hmac);
-    console.log('Received hash:', hash);
-    
-    // Порівнюємо отриманий хеш з переданим
-    return hmac === hash;
-  } catch (error) {
-    console.error('Error in validateSingleInitData:', error);
-    return false;
   }
-}
-
+  
 module.exports = validateTelegramWebAppData;
