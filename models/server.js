@@ -272,8 +272,16 @@ app.get('/api/complaints', auth, async (req, res) => {
   try {
     let query = {};
     
-    // Отримуємо userId з параметрів запиту або з об'єкта користувача
-    const requestUserId = req.query.userId || (req.user && req.user.id);
+    // Отримуємо userId з різних джерел (пріоритет: параметр запиту > заголовок > сесія)
+    const requestUserId = req.query.userId || 
+                         (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null) || 
+                         (req.user && req.user.id);
+    
+    // Додатково логуємо заголовки авторизації
+    console.log('Authorization headers:', {
+      authHeader: req.headers.authorization,
+      token: req.headers.authorization ? req.headers.authorization.split(' ')[1] : null
+    });
     
     // Перевіряємо роль користувача
     const userIsAdmin = isAdmin(requestUserId);
@@ -281,8 +289,16 @@ app.get('/api/complaints', auth, async (req, res) => {
       requestUserId: requestUserId, 
       isAdmin: userIsAdmin,
       queryUserId: req.query.userId,
-      userFromSession: req.user ? req.user.id : null
+      userFromSession: req.user ? req.user.id : null,
+      sessionExists: !!req.session,
+      sessionUser: req.session ? req.session.user : null
     });
+    
+    // Перевіряємо наявність userId
+    if (!requestUserId) {
+      console.error('No userId found in request');
+      return res.status(400).json({ error: 'User ID is required' });
+    }
     
     // Якщо користувач не адмін, показуємо тільки його звернення
     if (!userIsAdmin) {
@@ -300,27 +316,56 @@ app.get('/api/complaints', auth, async (req, res) => {
     res.json(complaints);
   } catch (error) {
     console.error('Error fetching complaints:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
 // Create complaint
 app.post('/api/complaints', auth, async (req, res) => {
   try {
+    // Логуємо інформацію про запит
+    console.log('Received complaint request:', {
+      body: req.body,
+      user: req.user,
+      authHeader: req.headers.authorization,
+      sessionUser: req.session ? req.session.user : null
+    });
+    
+    // Отримуємо userId з різних джерел (пріоритет: тіло запиту > заголовок > сесія)
+    const userId = req.body.userId || 
+                  (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null) || 
+                  (req.user ? req.user.id : null);
+    
+    if (!userId) {
+      console.error('No userId found in request');
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    // Створюємо нову скаргу
     const complaint = new Complaint({
-      userId: req.user.id,
+      userId: userId,
       type: req.body.type,
       message: req.body.message,
-      contactInfo: req.body.contactInfo
+      contactInfo: req.body.contactInfo || 'Anonymous',
+      createdAt: new Date()
     });
 
-    await complaint.save();
+    // Зберігаємо скаргу
+    const savedComplaint = await complaint.save();
+    console.log('Complaint saved successfully:', {
+      id: savedComplaint._id,
+      userId: savedComplaint.userId,
+      type: savedComplaint.type
+    });
+    
+    // Повідомляємо всіх клієнтів про нову скаргу
     io.emit('newComplaint');
 
-    res.json(complaint);
+    // Повертаємо створену скаргу
+    res.json(savedComplaint);
   } catch (error) {
     console.error('Error creating complaint:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

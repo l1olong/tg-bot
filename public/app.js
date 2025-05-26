@@ -486,8 +486,15 @@ async function loadComplaints() {
             </div>
         `;
         
-        // Надсилаємо запит з авторизацією
-        const response = await fetch('/api/complaints', {
+        // Логуємо інформацію про користувача перед запитом
+        console.log('User info before request:', {
+            id: currentUser.id,
+            role: currentUser.role,
+            authHeader: `Bearer ${currentUser.id}`
+        });
+        
+        // Надсилаємо запит з авторизацією та явно вказуємо userId в URL
+        const response = await fetch(`/api/complaints?userId=${currentUser.id}`, {
             headers: {
                 'Authorization': `Bearer ${currentUser.id}`
             },
@@ -525,10 +532,19 @@ async function loadComplaints() {
 }
 
 function filterAndDisplayComplaints() {
+    console.log('Filtering and displaying complaints, total count:', allComplaints.length);
+    
     const complaintFilterChecked = document.getElementById('complaintFilter').checked;
     const suggestionFilterChecked = document.getElementById('suggestionFilter').checked;
     const answeredFilterChecked = document.getElementById('answeredFilter').checked;
     const sortOrder = document.getElementById('sortOrder').value;
+    
+    console.log('Filter settings:', {
+        complaints: complaintFilterChecked,
+        suggestions: suggestionFilterChecked,
+        answered: answeredFilterChecked,
+        sortOrder: sortOrder
+    });
     
     let filteredComplaints = allComplaints.filter(complaint => {
         if (complaint.type === 'complaint' && !complaintFilterChecked) return false;
@@ -546,11 +562,24 @@ function filterAndDisplayComplaints() {
         return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
     
+    console.log('Filtered complaints count:', filteredComplaints.length);
+    
     const feedbackList = document.getElementById('feedbackList');
     
     if (filteredComplaints.length === 0) {
         feedbackList.innerHTML = `<p class="text-muted">${translations[currentLanguage].noFeedback}</p>`;
         return;
+    }
+    
+    // Логуємо перші кілька скарг для діагностики
+    if (filteredComplaints.length > 0) {
+        console.log('First complaint example:', {
+            id: filteredComplaints[0].id || filteredComplaints[0]._id,
+            type: filteredComplaints[0].type,
+            userId: filteredComplaints[0].userId,
+            date: filteredComplaints[0].date || filteredComplaints[0].createdAt,
+            hasAdminResponse: !!filteredComplaints[0].adminResponse
+        });
     }
     
     feedbackList.innerHTML = filteredComplaints
@@ -620,13 +649,16 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     };
 
     try {
+        console.log('Sending complaint with data:', formData);
+        
         const response = await fetch('/api/complaints', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${userId}` // Використовуємо ID користувача Telegram
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify(formData),
+            credentials: 'include' // Важливо для передачі сесійних куків
         });
 
         // Відновлюємо кнопку
@@ -634,6 +666,9 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         submitButton.innerHTML = originalButtonText;
 
         if (response.ok) {
+            const responseData = await response.json();
+            console.log('Complaint submitted successfully:', responseData);
+            
             document.getElementById('feedbackForm').reset();
             
             // Переконуємося, що дані користувача збережені перед оновленням списку
@@ -644,8 +679,10 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
                 console.log('Recreated tgUser before updating feedback list:', window.tgUser);
             }
             
-            // Оновлюємо список звернень
-            updateFeedbackList();
+            // Оновлюємо список звернень з невеликою затримкою, щоб дати час на оновлення даних у базі
+            setTimeout(() => {
+                loadComplaints();
+            }, 500);
             
             // Показуємо повідомлення про успіх
             showToast(
@@ -661,6 +698,8 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
             } catch (e) {
                 errorData = { error: 'Unknown error' };
             }
+            
+            console.error('Error submitting complaint:', errorData);
             
             showToast(
                 currentLanguage === 'ua' 
@@ -678,7 +717,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         
         showToast(
             currentLanguage === 'ua' 
-                ? 'Помилка при надсиланні звернення: ' + error.message
+                ? 'Помилка при надсиланні звернення: ' + error.message 
                 : 'Error submitting feedback: ' + error.message,
             'error'
         );
