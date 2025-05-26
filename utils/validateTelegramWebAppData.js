@@ -7,45 +7,37 @@ const crypto = require('crypto');
  * @returns {boolean} - Результат валідації
  */
 function validateTelegramWebAppData(initData, botToken) {
-  try {
-    console.log('Validating Telegram WebApp data...');
-    
-    if (!initData) {
-      console.error('No initData provided for validation');
+    try {
+      const urlParams = new URLSearchParams(initData);
+      const hash = urlParams.get('hash');
+  
+      // Видаляємо hash з параметрів
+      urlParams.delete('hash');
+  
+      // Сортуємо параметри за ключем
+      const sortedParams = [...urlParams.entries()].sort(([a], [b]) => a.localeCompare(b));
+  
+      // Формуємо dataCheckString без hash
+      const dataCheckString = sortedParams.map(([key, value]) => `${key}=${value}`).join('\n');
+  
+      // Обчислюємо HMAC
+      const secretKey = crypto.createHash('sha256').update(botToken).digest();
+      const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  
+      const isValid = hmac === hash;
+  
+      console.log('✅ Sorted dataCheckString:\n', dataCheckString);
+      console.log('✅ Generated HMAC:', hmac);
+      console.log('✅ Received hash:', hash);
+      console.log('✅ Validation result:', isValid);
+  
+      return isValid;
+    } catch (err) {
+      console.error('❌ Error validating Telegram WebApp data:', err);
       return false;
     }
-    
-    if (!botToken) {
-      console.error('No bot token provided for validation');
-      return false;
-    }
-    
-    // Перевіряємо наявність символів "+" та пробілів
-    console.log('initData contains "+" symbols:', initData.includes('+'));
-    console.log('initData contains spaces:', initData.includes(' '));
-    
-    // Створюємо два варіанти initData - оригінальний та з заміною пробілів на "+"
-    const originalInitData = initData;
-    const fixedInitData = initData.replace(/ /g, '+');
-    
-    console.log('Original initData length:', originalInitData.length);
-    console.log('Fixed initData length:', fixedInitData.length);
-    
-    // Спробуємо обидва варіанти
-    const originalResult = validateSingleInitData(originalInitData, botToken);
-    const fixedResult = validateSingleInitData(fixedInitData, botToken);
-    
-    console.log('Original validation result:', originalResult);
-    console.log('Fixed validation result:', fixedResult);
-    
-    // Повертаємо true, якщо хоча б один варіант успішний
-    return originalResult || fixedResult;
-  } catch (error) {
-    console.error('Error validating Telegram data:', error);
-    return false;
   }
-}
-
+  
 /**
  * Допоміжна функція для валідації одного варіанту initData
  * @param {string} initData - Рядок ініціалізації з Telegram WebApp
