@@ -26,6 +26,7 @@ function validateTelegramWebAppData(initData, botToken) {
 
     const isValid = hmac === hash;
 
+    console.log("✅Used BOT_TOKEN:", botToken);
     console.log('✅ Sorted dataCheckString:\n', dataCheckString);
     console.log('✅ Generated HMAC:', hmac);
     console.log('✅ Received hash:', hash);
