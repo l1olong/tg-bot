@@ -20,6 +20,40 @@ function validateTelegramWebAppData(initData, botToken) {
       return false;
     }
     
+    // Перевіряємо наявність символів "+" та пробілів
+    console.log('initData contains "+" symbols:', initData.includes('+'));
+    console.log('initData contains spaces:', initData.includes(' '));
+    
+    // Створюємо два варіанти initData - оригінальний та з заміною пробілів на "+"
+    const originalInitData = initData;
+    const fixedInitData = initData.replace(/ /g, '+');
+    
+    console.log('Original initData length:', originalInitData.length);
+    console.log('Fixed initData length:', fixedInitData.length);
+    
+    // Спробуємо обидва варіанти
+    const originalResult = validateSingleInitData(originalInitData, botToken);
+    const fixedResult = validateSingleInitData(fixedInitData, botToken);
+    
+    console.log('Original validation result:', originalResult);
+    console.log('Fixed validation result:', fixedResult);
+    
+    // Повертаємо true, якщо хоча б один варіант успішний
+    return originalResult || fixedResult;
+  } catch (error) {
+    console.error('Error validating Telegram data:', error);
+    return false;
+  }
+}
+
+/**
+ * Допоміжна функція для валідації одного варіанту initData
+ * @param {string} initData - Рядок ініціалізації з Telegram WebApp
+ * @param {string} botToken - Токен Telegram бота
+ * @returns {boolean} - Результат валідації
+ */
+function validateSingleInitData(initData, botToken) {
+  try {
     // Розбираємо initData як query string
     const urlParams = new URLSearchParams(initData);
     const hash = urlParams.get('hash');
@@ -53,12 +87,9 @@ function validateTelegramWebAppData(initData, botToken) {
     console.log('Received hash:', hash);
     
     // Порівнюємо отриманий хеш з переданим
-    const isValid = hmac === hash;
-    console.log('Validation result:', isValid);
-    
-    return isValid;
+    return hmac === hash;
   } catch (error) {
-    console.error('Error validating Telegram data:', error);
+    console.error('Error in validateSingleInitData:', error);
     return false;
   }
 }

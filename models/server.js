@@ -29,6 +29,11 @@ const io = socketIo(server, {
 
 // Basic middleware
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.json());
 app.use(cors({
   origin: true,
@@ -169,21 +174,13 @@ app.post('/api/auth', (req, res) => {
   }
 });
 
-// Routes
-app.get('/api/user', (req, res) => {
-  if (req.session.user) {
-    res.json({
-      id: req.session.user.id,
-      role: isAdmin(req.session.user.id) ? 'admin' : 'user'
-    });
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
-
+// Маршрут для автентифікації через Telegram WebApp з initData
 app.post('/api/auth/telegram', (req, res) => {
   try {
     const { initData, userData } = req.body;
+    
+    // Логуємо оригінальне тіло запиту
+    console.log('Raw request body:', req.rawBody);
     
     console.log('Received auth request with initData and userData:', { 
       initDataLength: initData ? initData.length : 0,
@@ -200,57 +197,90 @@ app.post('/api/auth/telegram', (req, res) => {
     function validateTelegramWebAppData(initData, botToken) {
       console.log('Raw initData for validation:', initData);
       
+      // Перевіряємо, чи є в initData символи "+", які могли бути перетворені
+      console.log('Contains "+" symbols:', initData.includes('+'));
+      console.log('Contains " " (spaces):', initData.includes(' '));
+      
+      // Спробуємо відновити оригінальний формат, якщо пробіли були перетворені з "+"
+      const fixedInitData = initData.replace(/ /g, '+');
+      console.log('Fixed initData (replacing spaces with +):', fixedInitData);
+      
+      // Спробуємо обидва варіанти - оригінальний та виправлений
       const parsedData = new URLSearchParams(initData);
-      const hash = parsedData.get("hash");
+      const fixedParsedData = new URLSearchParams(fixedInitData);
+      
+      const hash = parsedData.get("hash") || fixedParsedData.get("hash");
       
       if (!hash) {
         console.error('No hash found in initData');
         return false;
       }
       
+      // Видаляємо hash з параметрів для перевірки
       parsedData.delete("hash");
+      fixedParsedData.delete("hash");
       
       // Виводимо всі параметри для діагностики
-      console.log('Parameters after parsing:');
+      console.log('Parameters after parsing (original):');
       for (const [key, value] of parsedData.entries()) {
         console.log(`${key}: ${value}`);
       }
-    
-      // Створюємо рядок для перевірки точно за документацією Telegram
+      
+      console.log('Parameters after parsing (fixed):');
+      for (const [key, value] of fixedParsedData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+      
+      // Створюємо рядок для перевірки з оригінальними даними
       const dataCheckArray = [];
       for (const [key, value] of parsedData.entries()) {
         dataCheckArray.push(`${key}=${value}`);
       }
-      
-      // Сортуємо за ключем (важливо для правильної перевірки)
       dataCheckArray.sort();
-      
-      // З'єднуємо з символом нового рядка
       const dataCheckString = dataCheckArray.join('\n');
       
-      console.log('Data check string for validation:', dataCheckString);
-    
+      // Створюємо рядок для перевірки з виправленими даними
+      const fixedDataCheckArray = [];
+      for (const [key, value] of fixedParsedData.entries()) {
+        fixedDataCheckArray.push(`${key}=${value}`);
+      }
+      fixedDataCheckArray.sort();
+      const fixedDataCheckString = fixedDataCheckArray.join('\n');
+      
+      console.log('Data check string for validation (original):', dataCheckString);
+      console.log('Data check string for validation (fixed):', fixedDataCheckString);
+      
       // Створюємо секретний ключ з токена бота
       const secretKey = crypto
         .createHash('sha256')
         .update(botToken)
         .digest();
-    
-      // Створюємо HMAC-SHA-256 хеш
+      
+      // Створюємо HMAC-SHA-256 хеш для обох варіантів
       const hmac = crypto
         .createHmac('sha256', secretKey)
         .update(dataCheckString)
         .digest('hex');
-    
-      console.log('Generated HMAC:', hmac);
+        
+      const fixedHmac = crypto
+        .createHmac('sha256', secretKey)
+        .update(fixedDataCheckString)
+        .digest('hex');
+      
+      console.log('Generated HMAC (original):', hmac);
+      console.log('Generated HMAC (fixed):', fixedHmac);
       console.log('Received hash:', hash);
       console.log('Bot token used (first 5 chars):', botToken ? botToken.substring(0, 5) + '...' : 'undefined');
       
-      // Порівнюємо хеші
+      // Порівнюємо хеші для обох варіантів
       const isValid = hmac === hash;
-      console.log('Validation result:', isValid);
+      const isFixedValid = fixedHmac === hash;
       
-      return isValid;
+      console.log('Validation result (original):', isValid);
+      console.log('Validation result (fixed):', isFixedValid);
+      
+      // Повертаємо true, якщо хоча б один варіант збігається
+      return isValid || isFixedValid;
     }
     
     const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
