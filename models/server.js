@@ -187,7 +187,8 @@ app.post('/api/auth/telegram', (req, res) => {
     
     console.log('Received auth request with initData and userData:', { 
       initDataLength: initData ? initData.length : 0,
-      userData: userData ? { id: userData.id, username: userData.username } : null
+      userData: userData ? { id: userData.id, username: userData.username } : null,
+      rawInitData: initData // Логуємо сирий initData для діагностики
     });
     
     if (!initData) {
@@ -197,34 +198,72 @@ app.post('/api/auth/telegram', (req, res) => {
     
     // Валідуємо дані Telegram WebApp
     function validateTelegramWebAppData(initData, botToken) {
+      console.log('Raw initData for validation:', initData);
+      
       const parsedData = new URLSearchParams(initData);
       const hash = parsedData.get("hash");
+      
+      if (!hash) {
+        console.error('No hash found in initData');
+        return false;
+      }
+      
       parsedData.delete("hash");
+      
+      // Виводимо всі параметри для діагностики
+      console.log('Parameters after parsing:');
+      for (const [key, value] of parsedData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
     
-      const dataCheckString = [...parsedData]
-        .map(([key, value]) => `${key}=${value}`)
-        .sort()
-        .join('\n');
+      // Створюємо рядок для перевірки точно за документацією Telegram
+      const dataCheckArray = [];
+      for (const [key, value] of parsedData.entries()) {
+        dataCheckArray.push(`${key}=${value}`);
+      }
+      
+      // Сортуємо за ключем (важливо для правильної перевірки)
+      dataCheckArray.sort();
+      
+      // З'єднуємо з символом нового рядка
+      const dataCheckString = dataCheckArray.join('\n');
+      
+      console.log('Data check string for validation:', dataCheckString);
     
+      // Створюємо секретний ключ з токена бота
       const secretKey = crypto
         .createHash('sha256')
         .update(botToken)
         .digest();
     
+      // Створюємо HMAC-SHA-256 хеш
       const hmac = crypto
         .createHmac('sha256', secretKey)
         .update(dataCheckString)
         .digest('hex');
     
-      return hmac === hash;
+      console.log('Generated HMAC:', hmac);
+      console.log('Received hash:', hash);
+      console.log('Bot token used (first 5 chars):', botToken ? botToken.substring(0, 5) + '...' : 'undefined');
+      
+      // Порівнюємо хеші
+      const isValid = hmac === hash;
+      console.log('Validation result:', isValid);
+      
+      return isValid;
     }
-    // const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
-    // console.log('Telegram data validation result:', isValid);
     
-    // if (!isValid && process.env.NODE_ENV === 'production') {
-    //   console.error('Invalid Telegram data signature');
-    //   return res.status(401).json({ error: 'Invalid Telegram data' });
-    // }
+    const isValid = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
+    console.log('Telegram data validation result:', isValid);
+    
+    // Перевіряємо, чи правильний токен бота
+    console.log('TELEGRAM_TOKEN from env (first 5 chars):', 
+      process.env.TELEGRAM_TOKEN ? process.env.TELEGRAM_TOKEN.substring(0, 5) + '...' : 'undefined');
+    
+    if (!isValid && process.env.NODE_ENV === 'production') {
+      console.error('Invalid Telegram data signature');
+      return res.status(401).json({ error: 'Invalid Telegram data' });
+    }
     
     // Парсимо дані користувача з initData
     const params = new URLSearchParams(initData);
