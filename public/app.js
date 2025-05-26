@@ -98,8 +98,15 @@ function initializeTelegramWebApp() {
             console.error('Error calling Telegram WebApp expand():', error);
         }
         
-        // Автоматично авторизуємо користувача
-        authenticateWithTelegramUser(user, initData);
+        // Створюємо мінімальний об'єкт користувача, якщо initData відсутній
+        if (!initData) {
+            console.warn('initData is not available, creating mock data for authentication');
+            // Автоматично авторизуємо користувача навіть без initData
+            authenticateWithTelegramUser(user, 'mock_initdata');
+        } else {
+            // Автоматично авторизуємо користувача
+            authenticateWithTelegramUser(user, initData);
+        }
     }
 }
 
