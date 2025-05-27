@@ -14,6 +14,10 @@ const complaintSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  subject: {
+    type: String,
+    default: 'Без теми'
+  },
   message: {
     type: String,
     required: true

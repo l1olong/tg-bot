@@ -348,6 +348,7 @@ const translations = {
         feedbackType: 'Тип звернення',
         complaint: 'Скарга',
         suggestion: 'Пропозиція',
+        subject: 'Тема',
         message: 'Повідомлення',
         contactInfo: 'Контактна інформація',
         submit: 'Надіслати',
@@ -374,13 +375,21 @@ const translations = {
         filters: 'Фільтри',
         showAnswered: 'Показати з відповідями',
         newestFirst: 'Спочатку нові',
-        oldestFirst: 'Спочатку старі'
+        oldestFirst: 'Спочатку старі',
+        details: 'Деталі',
+        complaintDetails: 'Деталі звернення',
+        back: 'Назад',
+        noSubject: 'Без теми',
+        yourResponse: 'Ваша відповідь',
+        send: 'Надіслати',
+        cancel: 'Скасувати'
     },
     en: {
         submitFeedback: 'Submit Feedback',
         feedbackType: 'Feedback Type',
         complaint: 'Complaint',
         suggestion: 'Suggestion',
+        subject: 'Subject',
         message: 'Message',
         contactInfo: 'Contact Information',
         submit: 'Submit',
@@ -407,7 +416,14 @@ const translations = {
         filters: 'Filters',
         showAnswered: 'Show with responses',
         newestFirst: 'Newest first',
-        oldestFirst: 'Oldest first'
+        oldestFirst: 'Oldest first',
+        details: 'Details',
+        complaintDetails: 'Complaint Details',
+        back: 'Back',
+        noSubject: 'No subject',
+        yourResponse: 'Your Response',
+        send: 'Send',
+        cancel: 'Cancel'
     }
 };
 
@@ -437,21 +453,17 @@ function renderComplaint(complaint) {
                 ${translations[currentLanguage][complaint.type.toLowerCase()]}
                 <span class="status ${complaint.status}">${translations[currentLanguage][complaint.status]}</span>
             </h6>
-            <div class="feedback-message">${complaint.message}</div>
-            ${complaint.adminResponse ? `
-                <div class="admin-response">
-                    <strong>${translations[currentLanguage].adminResponse}:</strong>
-                    <p>${complaint.adminResponse.text}</p>
-                    <small>${translations[currentLanguage].responseDate}: ${formatDate(complaint.adminResponse.date)}</small>
-                </div>
-            ` : ''}
+            <div class="feedback-subject"><strong>${translations[currentLanguage].subject}:</strong> ${complaint.subject || translations[currentLanguage].noSubject}</div>
             <div class="feedback-meta">
-                ${translations[currentLanguage].date}: ${formatDate(complaint.date)}
-                ${complaint.contactInfo ? `| ${translations[currentLanguage].contactInfo}: ${complaint.contactInfo}` : ''}
+                ${complaint.contactInfo ? `<strong>${translations[currentLanguage].contactInfo}:</strong> ${complaint.contactInfo}` : ''}
+                ${complaint.adminResponse ? `<span class="badge bg-success ms-2">${translations[currentLanguage].answered}</span>` : ''}
             </div>
-            ${userRole === 'admin' ? `
-                <button class="btn btn-sm btn-primary" onclick="showResponseModal('${complaint.id}')">${translations[currentLanguage].answer}</button>
-            ` : ''}
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="showComplaintDetails('${complaint._id || complaint.id}')">${translations[currentLanguage].details}</button>
+                ${userRole === 'admin' && !complaint.adminResponse ? `
+                    <button class="btn btn-sm btn-primary ms-2" onclick="showResponseModal('${complaint._id || complaint.id}')">${translations[currentLanguage].answer}</button>
+                ` : ''}
+            </div>
         </div>
     `;
 }
@@ -643,6 +655,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
 
     const formData = {
         type: document.getElementById('type').value,
+        subject: document.getElementById('subject').value || 'Без теми',
         message: document.getElementById('message').value,
         contactInfo: document.getElementById('contactInfo').value || 'Anonymous',
         userId: userId // Використовуємо ID користувача Telegram
@@ -869,6 +882,226 @@ async function sendResponse() {
         );
     }
 }
+
+// Функція для відображення деталей звернення
+function showComplaintDetails(complaintId) {
+    console.log('Showing complaint details for:', complaintId);
+    
+    // Знаходимо звернення за ID
+    const complaint = allComplaints.find(c => (c._id || c.id) === complaintId);
+    if (!complaint) {
+        console.error('Complaint not found:', complaintId);
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Звернення не знайдено' 
+                : 'Complaint not found',
+            'error'
+        );
+        return;
+    }
+    
+    // Приховуємо основний контент і показуємо деталі
+    const mainContent = document.getElementById('mainContent');
+    const detailsContainer = document.getElementById('complaintDetailsContainer');
+    
+    mainContent.style.display = 'none';
+    
+    // Рендеримо деталі звернення
+    detailsContainer.innerHTML = `
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">${translations[currentLanguage].complaintDetails}</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="hideComplaintDetails()">
+                    <i class="fas fa-arrow-left"></i> ${translations[currentLanguage].back}
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="complaint-details">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>${translations[currentLanguage].feedbackType}</h6>
+                            <p>${translations[currentLanguage][complaint.type.toLowerCase()]}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>${translations[currentLanguage].status}</h6>
+                            <p><span class="badge ${complaint.status === 'new' ? 'bg-primary' : 'bg-success'}">${translations[currentLanguage][complaint.status]}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>${translations[currentLanguage].subject}</h6>
+                        <p>${complaint.subject || translations[currentLanguage].noSubject}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>${translations[currentLanguage].message}</h6>
+                        <p>${complaint.message}</p>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>${translations[currentLanguage].contactInfo}</h6>
+                            <p>${complaint.contactInfo || translations[currentLanguage].noContactInfo}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>${translations[currentLanguage].date}</h6>
+                            <p>${formatDate(complaint.date || complaint.createdAt)}</p>
+                        </div>
+                    </div>
+                    
+                    ${complaint.adminResponse ? `
+                        <div class="admin-response mt-4">
+                            <h6>${translations[currentLanguage].adminResponse}</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p>${complaint.adminResponse.text}</p>
+                                    <small class="text-muted">${translations[currentLanguage].responseDate}: ${formatDate(complaint.adminResponse.date)}</small>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${userRole === 'admin' && !complaint.adminResponse ? `
+                        <div class="mt-4">
+                            <button class="btn btn-primary" onclick="showResponseModal('${complaint._id || complaint.id}')">
+                                ${translations[currentLanguage].answer}
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Показуємо контейнер з деталями
+    detailsContainer.style.display = 'block';
+    
+    // Прокручуємо сторінку вгору
+    window.scrollTo(0, 0);
+}
+
+// Функція для приховування деталей звернення і повернення до списку
+function hideComplaintDetails() {
+    console.log('Hiding complaint details');
+    
+    // Приховуємо деталі і показуємо основний контент
+    const detailsContainer = document.getElementById('complaintDetailsContainer');
+    const mainContent = document.getElementById('mainContent');
+    
+    detailsContainer.style.display = 'none';
+    mainContent.style.display = 'block';
+}
+
+// Функція для показу модального вікна відповіді
+function showResponseModal(complaintId) {
+    console.log('Showing response modal for complaint:', complaintId);
+    
+    // Встановлюємо ID звернення в прихованому полі
+    document.getElementById('complaintId').value = complaintId;
+    
+    // Очищаємо поле відповіді
+    document.getElementById('responseText').value = '';
+    
+    // Показуємо модальне вікно
+    const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+    responseModal.show();
+}
+
+// Обробник події для кнопки відправки відповіді
+document.getElementById('sendResponseBtn').addEventListener('click', async () => {
+    const complaintId = document.getElementById('complaintId').value;
+    const responseText = document.getElementById('responseText').value;
+    
+    if (!responseText.trim()) {
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Будь ласка, введіть текст відповіді' 
+                : 'Please enter response text',
+            'warning'
+        );
+        return;
+    }
+    
+    console.log('Sending response for complaint:', complaintId);
+    
+    // Показуємо індикатор завантаження
+    const sendButton = document.getElementById('sendResponseBtn');
+    const originalButtonText = sendButton.innerHTML;
+    sendButton.disabled = true;
+    sendButton.innerHTML = `
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}
+    `;
+    
+    try {
+        const response = await fetch(`/api/complaints/${complaintId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.id}`
+            },
+            body: JSON.stringify({ response: responseText }),
+            credentials: 'include'
+        });
+        
+        // Відновлюємо кнопку
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalButtonText;
+        
+        if (response.ok) {
+            const responseData = await response.json();
+            console.log('Response submitted successfully:', responseData);
+            
+            // Закриваємо модальне вікно
+            const responseModal = bootstrap.Modal.getInstance(document.getElementById('responseModal'));
+            responseModal.hide();
+            
+            // Оновлюємо список звернень
+            await loadComplaints();
+            
+            // Якщо відкрита сторінка деталей, оновлюємо її
+            const detailsContainer = document.getElementById('complaintDetailsContainer');
+            if (detailsContainer.style.display !== 'none') {
+                showComplaintDetails(complaintId);
+            }
+            
+            // Показуємо повідомлення про успіх
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Відповідь успішно надіслано!' 
+                    : 'Response submitted successfully!',
+                'success'
+            );
+        } else {
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { error: 'Unknown error' };
+            }
+            
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Помилка при надсиланні відповіді: ' + (errorData.error || 'невідома помилка')
+                    : 'Error submitting response: ' + (errorData.error || 'unknown error'),
+                'error'
+            );
+        }
+    } catch (error) {
+        console.error('Error submitting response:', error);
+        
+        // Відновлюємо кнопку
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalButtonText;
+        
+        showToast(
+            currentLanguage === 'ua' 
+                ? 'Помилка при надсиланні відповіді: ' + error.message 
+                : 'Error submitting response: ' + error.message,
+            'error'
+        );
+    }
+});
 
 // Функція для показу повідомлень, які автоматично зникають
 function showToast(message, type = 'success', duration = 4000) {

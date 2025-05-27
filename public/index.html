@@ -46,6 +46,10 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
+                                    <label for="subject" class="form-label" data-translate="subject">Subject</label>
+                                    <input type="text" class="form-control" id="subject" required>
+                                </div>
+                                <div class="mb-3">
                                     <label for="message" class="form-label" data-translate="message">Message</label>
                                     <textarea class="form-control" id="message" rows="4" required></textarea>
                                 </div>
@@ -140,6 +144,34 @@
                             <div id="feedbackList"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Контейнер для деталей звернення -->
+        <div id="complaintDetailsContainer" class="mt-4" style="display: none;"></div>
+    </div>
+
+    <!-- Модальне вікно для відповіді адміністратора -->
+    <div class="modal fade" id="responseModal" tabindex="-1" aria-labelledby="responseModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="responseModalLabel" data-translate="yourResponse">Ваша відповідь</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="responseForm">
+                        <input type="hidden" id="complaintId">
+                        <div class="mb-3">
+                            <label for="responseText" class="form-label" data-translate="yourResponse">Ваша відповідь</label>
+                            <textarea class="form-control" id="responseText" rows="4" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancel">Скасувати</button>
+                    <button type="button" class="btn btn-primary" id="sendResponseBtn" data-translate="send">Надіслати</button>
                 </div>
             </div>
         </div>

@@ -1,9 +1,15 @@
+/* Стилі для елементів звернення */
 .feedback-item {
     border-left: 4px solid #007bff;
     margin-bottom: 1rem;
     padding: 1rem;
     background-color: #f8f9fa;
     border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.feedback-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .feedback-item.suggestion {
@@ -14,7 +20,24 @@
     border-left-color: #dc3545;
 }
 
-.feedback-item .status {
+.feedback-subject {
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.feedback-message {
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
+.feedback-meta {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    margin-bottom: 10px;
+}
+
+.status {
     display: inline-block;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
@@ -22,25 +45,24 @@
     margin-left: 0.5rem;
 }
 
-.feedback-item .status.new {
+.status.new {
     background-color: #ffc107;
     color: #000;
 }
 
-.feedback-item .status.answered {
+.status.answered {
     background-color: #28a745;
     color: #fff;
 }
 
-.feedback-meta {
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
+/* Стилі для деталей звернення */
+.complaint-details h6 {
+    color: #495057;
+    margin-bottom: 5px;
 }
 
-.feedback-message {
-    margin: 0.5rem 0;
-    white-space: pre-wrap;
+.complaint-details p {
+    margin-bottom: 15px;
 }
 
 .admin-response {
@@ -65,12 +87,37 @@
     margin-top: 1rem;
 }
 
+/* Анімація для переходів між сторінками */
+#mainContent, #complaintDetailsContainer {
+    transition: opacity 0.3s ease;
+}
+
+/* Стилі для модального вікна */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Стилі для блоку фільтрів */
+#filtersContainer {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+/* Стилі для користувацького інтерфейсу */
 #userInfo {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
+/* Стилі для акордеону */
 .accordion-item {
     border-color: #dee2e6;
     margin-bottom: 0.5rem;
@@ -91,124 +138,64 @@
     background-color: #f8f9fa;
 }
 
-/* Стилі для блоку фільтрів */
-#filtersContainer {
-    background-color: #f8f9fa;
-    border-color: #dee2e6 !important;
-    transition: all 0.3s ease;
-}
-
-#toggleFiltersBtn {
-    transition: all 0.2s ease;
-}
-
-#toggleFiltersBtn:hover {
-    background-color: #e9ecef;
-}
-
-.filter-checkbox {
-    cursor: pointer;
-}
-
-#sortOrder {
-    border-color: #dee2e6;
-}
-
-#sortOrder:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
-}
-
-/* Анімація для плавної появи/зникнення фільтрів */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.fade-in {
-    animation: fadeIn 0.3s ease forwards;
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-10px); }
-}
-
-.fade-out {
-    animation: fadeOut 0.3s ease forwards;
-}
-
-/* Стилі для повідомлень (toast) */
-.toast-message {
+/* Стилі для тостів */
+.toast-container {
     position: fixed;
-    bottom: 20px;
+    top: 20px;
     right: 20px;
-    padding: 12px 20px;
-    border-radius: 4px;
-    color: white;
+    z-index: 1050;
+}
+
+.toast {
+    min-width: 250px;
     max-width: 350px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    z-index: 9999;
-    transform: translateY(100px);
-    opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    background-color: #fff;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    animation: slideInRight 0.3s ease-in-out, fadeOut 0.5s ease-in-out 3.5s forwards;
 }
 
-.toast-message.show {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.toast-success {
-    background-color: #28a745;
-}
-
-.toast-error {
-    background-color: #dc3545;
-}
-
-.toast-warning {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.toast-content {
+.toast-header {
     display: flex;
     align-items: center;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.toast-content i {
-    margin-right: 10px;
-    font-size: 20px;
+.toast-body {
+    padding: 0.75rem;
 }
 
-/* Стилі для повідомлень авторизації */
-#telegramRequiredMsg {
-    animation: fadeIn 0.5s ease-in-out;
+.toast.success {
+    border-left: 4px solid #28a745;
 }
 
-#authLoadingIndicator {
-    animation: fadeIn 0.3s ease-in-out;
+.toast.error {
+    border-left: 4px solid #dc3545;
 }
 
-/* Стилі для індикатора ролі */
-#roleIndicator {
-    transition: background-color 0.3s ease;
-    animation: slideIn 0.5s ease-in-out;
+.toast.warning {
+    border-left: 4px solid #ffc107;
 }
 
-/* Анімації */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.toast.info {
+    border-left: 4px solid #17a2b8;
 }
 
-@keyframes slideIn {
-    from { transform: translateY(-20px); opacity: 0; }
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* Стилі для відображення ролі користувача */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Стилі для бейджів */
 .badge.bg-danger {
     background-color: #dc3545 !important;
 }
