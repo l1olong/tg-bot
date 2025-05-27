@@ -17,6 +17,8 @@
         <div class="container">
             <a class="navbar-brand" href="#">Customer Feedback Portal</a>
             <div class="d-flex align-items-center">
+                <!-- Закоментовано віджет авторизації Telegram, який показує білу плашку з "Username invalid" -->
+                <!--
                 <div id="telegram-login">
                     <script async src="https://telegram.org/js/telegram-widget.js?22" 
                             data-telegram-login="${process.env.BOT_USERNAME}" 
@@ -24,6 +26,7 @@
                             data-onauth="onTelegramAuth(user)"
                             data-request-access="write"></script>
                 </div>
+                -->
                 <button class="btn btn-outline-light ms-2 me-2" onclick="setLanguage('ua')">🇺🇦 UA</button>
                 <button class="btn btn-outline-light" onclick="setLanguage('en')">🇺🇸 EN</button>
             </div>
