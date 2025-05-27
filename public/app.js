@@ -640,7 +640,23 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     const type = document.getElementById('type').value;
     const subject = document.getElementById('subject').value.trim();
     const message = document.getElementById('message').value.trim();
-    const contactInfo = document.getElementById('contactInfo').value.trim();
+    const includeContactInfo = document.getElementById('includeContactInfo').checked;
+    
+    // Визначаємо контактну інформацію на основі чекбоксу
+    let contactInfo;
+    if (includeContactInfo) {
+        // Якщо користувач вибрав "так", використовуємо його username або ім'я
+        contactInfo = window.tgUser?.username || 
+                      (window.tgUser?.first_name ? `${window.tgUser.first_name} ${window.tgUser.last_name || ''}`.trim() : null);
+        
+        // Якщо з якоїсь причини не вдалося отримати ім'я користувача, використовуємо ID
+        if (!contactInfo) {
+            contactInfo = `User ID: ${userId}`;
+        }
+    } else {
+        // Якщо користувач вибрав "ні", використовуємо "Анонімно" або "Anonymous"
+        contactInfo = currentLanguage === 'ua' ? 'Анонімно' : 'Anonymous';
+    }
     
     // Валідація полів
     let isValid = true;
@@ -705,7 +721,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         type: type,
         subject: subject || 'Без теми',
         message: message,
-        contactInfo: contactInfo || 'Anonymous',
+        contactInfo: contactInfo,
         userId: userId // Використовуємо ID користувача Telegram
     };
 
