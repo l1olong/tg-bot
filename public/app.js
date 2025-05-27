@@ -376,7 +376,14 @@ const translations = {
         complaintDetails: 'Деталі звернення',
         noSubject: 'Без теми',
         noContactInfo: 'Не вказано',
-        anonymous: 'Анонімно'
+        anonymous: 'Анонімно',
+        faqTitle: 'Часті запитання',
+        howToLeaveComplaint: 'Як залишити скаргу?',
+        faqAnswer1: 'Ви можете залишити скаргу через форму зворотного зв\'язку.',
+        howToLeaveSuggestion: 'Як залишити пропозицію?',
+        faqAnswer2: 'Ви можете залишити пропозицію, використовуючи ту саму форму.',
+        howToGetResponse: 'Як отримати відповідь?',
+        faqAnswer3: 'Відповідь надається адміністратором після розгляду звернення.'
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -408,7 +415,14 @@ const translations = {
         complaintDetails: 'Complaint Details',
         noSubject: 'No subject',
         noContactInfo: 'Not specified',
-        anonymous: 'Anonymous'
+        anonymous: 'Anonymous',
+        faqTitle: 'Frequently Asked Questions',
+        howToLeaveComplaint: 'How to leave a complaint?',
+        faqAnswer1: 'You can leave a complaint through the feedback form.',
+        howToLeaveSuggestion: 'How to leave a suggestion?',
+        faqAnswer2: 'You can leave a suggestion using the same form.',
+        howToGetResponse: 'How to get a response?',
+        faqAnswer3: 'The response is provided by the admin after reviewing the submission.'
     }
 };
 
@@ -731,7 +745,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     submitButton.disabled = true;
     submitButton.innerHTML = `
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Надсилання...'}
+        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}
     `;
 
     const formData = {

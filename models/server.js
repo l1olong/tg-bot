@@ -345,6 +345,7 @@ app.post('/api/complaints', auth, async (req, res) => {
     const complaint = new Complaint({
       userId: userId,
       type: req.body.type,
+      subject: req.body.subject, 
       message: req.body.message,
       contactInfo: req.body.contactInfo || 'Anonymous',
       createdAt: new Date()
