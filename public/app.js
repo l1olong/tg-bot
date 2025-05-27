@@ -354,38 +354,29 @@ const translations = {
         subject: 'Тема',
         message: 'Повідомлення',
         contactInfo: 'Контактна інформація',
+        includeContactInfo: 'Додати мою контактну інформацію',
         submit: 'Надіслати',
         feedbackList: 'Список звернень',
+        date: 'Дата',
         status: 'Статус',
         new: 'Нове',
         answered: 'Відповідь надано',
-        date: 'Дата',
-        noFeedback: 'Немає звернень',
         adminResponse: 'Відповідь адміністратора',
         responseDate: 'Дата відповіді',
-        loginTitle: 'Увійти через Telegram',
-        loginDescription: 'Будь ласка, увійдіть через Telegram щоб надсилати та переглядати звернення',
-        logoutBtn: 'Вийти',
-        loginRequired: 'Необхідно увійти для надсилання звернень',
-        faqTitle: 'Часті питання',
-        howToLeaveComplaint: 'Як подати скаргу?',
-        howToLeaveSuggestion: 'Як подати пропозицію?',
-        howToGetResponse: 'Як отримати відповідь?',
-        faqAnswer1: 'Ви можете залишити скаргу через форму зворотного зв\'язку.',
-        faqAnswer2: 'Ви можете залишити пропозицію, скориставшись тією ж формою.',
-        faqAnswer3: 'Відповідь надається адміністратором після розгляду звернення.',
-        answer: 'Відповідь',
+        answer: 'Відповісти',
+        yourResponse: 'Ваша відповідь',
+        send: 'Надіслати',
+        cancel: 'Скасувати',
         filters: 'Фільтри',
-        showAnswered: 'Показати з відповідями',
+        showAnswered: 'Показувати з відповідями',
         newestFirst: 'Спочатку нові',
         oldestFirst: 'Спочатку старі',
         details: 'Деталі',
-        complaintDetails: 'Деталі звернення',
         back: 'Назад',
+        complaintDetails: 'Деталі звернення',
         noSubject: 'Без теми',
-        yourResponse: 'Ваша відповідь',
-        send: 'Надіслати',
-        cancel: 'Скасувати'
+        noContactInfo: 'Не вказано',
+        anonymous: 'Анонімно'
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -395,38 +386,29 @@ const translations = {
         subject: 'Subject',
         message: 'Message',
         contactInfo: 'Contact Information',
+        includeContactInfo: 'Include my contact information',
         submit: 'Submit',
         feedbackList: 'Feedback List',
+        date: 'Date',
         status: 'Status',
         new: 'New',
         answered: 'Answered',
-        date: 'Date',
-        noFeedback: 'No feedback available',
         adminResponse: 'Admin Response',
         responseDate: 'Response Date',
-        loginTitle: 'Login with Telegram',
-        loginDescription: 'Please login with Telegram to submit and view feedback',
-        logoutBtn: 'Logout',
-        loginRequired: 'Login required to submit feedback',
-        faqTitle: 'Frequently Asked Questions',
-        howToLeaveComplaint: 'How to leave a complaint?',
-        howToLeaveSuggestion: 'How to leave a suggestion?',
-        howToGetResponse: 'How to get a response?',
-        faqAnswer1: 'You can leave a complaint through the feedback form.',
-        faqAnswer2: 'You can leave a suggestion using the same form.',
-        faqAnswer3: 'The response is provided by the admin after reviewing the submission.',
         answer: 'Answer',
+        yourResponse: 'Your Response',
+        send: 'Send',
+        cancel: 'Cancel',
         filters: 'Filters',
         showAnswered: 'Show with responses',
         newestFirst: 'Newest first',
         oldestFirst: 'Oldest first',
         details: 'Details',
-        complaintDetails: 'Complaint Details',
         back: 'Back',
+        complaintDetails: 'Complaint Details',
         noSubject: 'No subject',
-        yourResponse: 'Your Response',
-        send: 'Send',
-        cancel: 'Cancel'
+        noContactInfo: 'Not specified',
+        anonymous: 'Anonymous'
     }
 };
 
@@ -450,6 +432,19 @@ function formatDate(dateString) {
 }
 
 function renderComplaint(complaint) {
+    // Визначаємо, як відображати контактну інформацію
+    let contactInfoDisplay = '';
+    if (complaint.contactInfo) {
+        // Перевіряємо, чи це анонімне звернення
+        if (complaint.contactInfo === 'Анонімно' || complaint.contactInfo === 'Anonymous') {
+            contactInfoDisplay = `<strong>${translations[currentLanguage].contactInfo}:</strong> <em>${translations[currentLanguage].anonymous}</em>`;
+        } else {
+            contactInfoDisplay = `<strong>${translations[currentLanguage].contactInfo}:</strong> ${complaint.contactInfo}`;
+        }
+    } else {
+        contactInfoDisplay = `<strong>${translations[currentLanguage].contactInfo}:</strong> <em>${translations[currentLanguage].noContactInfo}</em>`;
+    }
+
     return `
         <div class="feedback-item ${complaint.type.toLowerCase()}">
             <h6>
@@ -458,7 +453,7 @@ function renderComplaint(complaint) {
             </h6>
             <div class="feedback-subject"><strong>${translations[currentLanguage].subject}:</strong> ${complaint.subject || translations[currentLanguage].noSubject}</div>
             <div class="feedback-meta">
-                ${complaint.contactInfo ? `<strong>${translations[currentLanguage].contactInfo}:</strong> ${complaint.contactInfo}` : ''}
+                ${contactInfoDisplay}
                 ${complaint.adminResponse ? `<span class="badge bg-success ms-2">${translations[currentLanguage].answered}</span>` : ''}
             </div>
             <div class="mt-2">
@@ -986,6 +981,19 @@ function showComplaintDetails(complaintId) {
     
     mainContent.style.display = 'none';
     
+    // Визначаємо, як відображати контактну інформацію
+    let contactInfoDisplay = '';
+    if (complaint.contactInfo) {
+        // Перевіряємо, чи це анонімне звернення
+        if (complaint.contactInfo === 'Анонімно' || complaint.contactInfo === 'Anonymous') {
+            contactInfoDisplay = `<em>${translations[currentLanguage].anonymous}</em>`;
+        } else {
+            contactInfoDisplay = complaint.contactInfo;
+        }
+    } else {
+        contactInfoDisplay = `<em>${translations[currentLanguage].noContactInfo}</em>`;
+    }
+    
     // Рендеримо деталі звернення
     detailsContainer.innerHTML = `
         <div class="card">
@@ -1021,7 +1029,7 @@ function showComplaintDetails(complaintId) {
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <h6>${translations[currentLanguage].contactInfo}</h6>
-                            <p>${complaint.contactInfo || translations[currentLanguage].noContactInfo}</p>
+                            <p>${contactInfoDisplay}</p>
                         </div>
                         <div class="col-md-6">
                             <h6>${translations[currentLanguage].date}</h6>
