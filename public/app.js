@@ -20,6 +20,9 @@ window.tgUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing application');
     
+    // Встановлюємо українську мову при завантаженні сторінки
+    setLanguage('ua');
+
     // Додаємо затримку для гарантії завантаження Telegram WebApp
     setTimeout(() => {
         initializeTelegramWebApp();
@@ -638,6 +641,56 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         return;
     }
     
+    // Отримуємо значення полів форми
+    const type = document.getElementById('type').value;
+    const subject = document.getElementById('subject').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const contactInfo = document.getElementById('contactInfo').value.trim();
+    
+    // Валідація полів
+    let isValid = true;
+    let errorMessages = [];
+    
+    // Перевіряємо поле "Тип звернення"
+    if (!type) {
+        isValid = false;
+        errorMessages.push(currentLanguage === 'ua' 
+            ? 'Будь ласка, виберіть тип звернення' 
+            : 'Please select a feedback type');
+        highlightField('type');
+    }
+    
+    // Перевіряємо поле "Тема"
+    if (!subject) {
+        isValid = false;
+        errorMessages.push(currentLanguage === 'ua' 
+            ? 'Будь ласка, вкажіть тему звернення' 
+            : 'Please enter a subject');
+        highlightField('subject');
+    }
+    
+    // Перевіряємо поле "Повідомлення"
+    if (!message) {
+        isValid = false;
+        errorMessages.push(currentLanguage === 'ua' 
+            ? 'Будь ласка, введіть текст повідомлення' 
+            : 'Please enter a message');
+        highlightField('message');
+    } else if (message.length < 10) {
+        isValid = false;
+        errorMessages.push(currentLanguage === 'ua' 
+            ? 'Повідомлення має містити щонайменше 10 символів' 
+            : 'Message should be at least 10 characters long');
+        highlightField('message');
+    }
+    
+    // Якщо є помилки валідації, показуємо їх і перериваємо відправку
+    if (!isValid) {
+        // Показуємо перше повідомлення про помилку
+        showToast(errorMessages[0], 'error');
+        return;
+    }
+    
     console.log('Submitting feedback with user data:', {
         currentUser: currentUser,
         tgUser: window.tgUser,
@@ -654,10 +707,10 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     `;
 
     const formData = {
-        type: document.getElementById('type').value,
-        subject: document.getElementById('subject').value || 'Без теми',
-        message: document.getElementById('message').value,
-        contactInfo: document.getElementById('contactInfo').value || 'Anonymous',
+        type: type,
+        subject: subject || 'Без теми',
+        message: message,
+        contactInfo: contactInfo || 'Anonymous',
         userId: userId // Використовуємо ID користувача Telegram
     };
 
@@ -682,7 +735,19 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
             const responseData = await response.json();
             console.log('Complaint submitted successfully:', responseData);
             
+            // Очищаємо форму
             document.getElementById('feedbackForm').reset();
+            
+            // Знімаємо виділення з полів, якщо вони були виділені
+            resetFieldHighlights();
+            
+            // Показуємо повідомлення про успіх
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Ваше звернення успішно надіслано!' 
+                    : 'Your feedback has been submitted successfully!',
+                'success'
+            );
             
             // Переконуємося, що дані користувача збережені перед оновленням списку
             if (!window.tgUser && userId) {
@@ -696,14 +761,6 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
             setTimeout(() => {
                 loadComplaints();
             }, 500);
-            
-            // Показуємо повідомлення про успіх
-            showToast(
-                currentLanguage === 'ua' 
-                    ? 'Звернення успішно надіслано!' 
-                    : 'Feedback submitted successfully!',
-                'success'
-            );
         } else {
             let errorData;
             try {
@@ -711,8 +768,6 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
             } catch (e) {
                 errorData = { error: 'Unknown error' };
             }
-            
-            console.error('Error submitting complaint:', errorData);
             
             showToast(
                 currentLanguage === 'ua' 
@@ -730,12 +785,37 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         
         showToast(
             currentLanguage === 'ua' 
-                ? 'Помилка при надсиланні звернення: ' + error.message 
+                ? 'Помилка при надсиланні звернення: ' + error.message
                 : 'Error submitting feedback: ' + error.message,
             'error'
         );
     }
 });
+
+// Функція для виділення поля з помилкою
+function highlightField(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.classList.add('is-invalid');
+        
+        // Додаємо обробник події для зняття виділення при фокусі
+        field.addEventListener('focus', function onFocus() {
+            field.classList.remove('is-invalid');
+            field.removeEventListener('focus', onFocus);
+        });
+    }
+}
+
+// Функція для зняття виділення з усіх полів
+function resetFieldHighlights() {
+    const fields = ['type', 'subject', 'message', 'contactInfo'];
+    fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.classList.remove('is-invalid');
+        }
+    });
+}
 
 socket.on('newComplaint', () => {
     updateFeedbackList();
