@@ -1182,6 +1182,11 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
     `;
     
     try {
+        console.log('Sending response with data:', {
+            complaintId: complaintId,
+            responseText: responseText
+        });
+        
         const response = await fetch(`/api/complaints/${complaintId}`, {
             method: 'PUT',
             headers: {
@@ -1191,11 +1196,11 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
             body: JSON.stringify({ response: responseText }),
             credentials: 'include'
         });
-        
+
         // Відновлюємо кнопку
         sendButton.disabled = false;
         sendButton.innerHTML = originalButtonText;
-        
+
         if (response.ok) {
             const responseData = await response.json();
             console.log('Response submitted successfully:', responseData);
@@ -1316,4 +1321,58 @@ function initializeUserFromStorage() {
         console.error('Error initializing user from storage:', error);
         return false;
     }
+}
+
+// Функція для показу спливаючих повідомлень
+function showToast(message, type = 'info') {
+    // Перевіряємо, чи існує контейнер для повідомлень
+    let toastContainer = document.getElementById('toastContainer');
+    
+    // Якщо контейнер не існує, створюємо його
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Створюємо унікальний ID для повідомлення
+    const toastId = 'toast-' + Date.now();
+    
+    // Визначаємо клас для типу повідомлення
+    let bgClass = 'bg-info';
+    if (type === 'success') bgClass = 'bg-success';
+    if (type === 'error') bgClass = 'bg-danger';
+    if (type === 'warning') bgClass = 'bg-warning';
+    
+    // Створюємо HTML для повідомлення
+    const toastHtml = `
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header ${bgClass} text-white">
+                <strong class="me-auto">${type === 'success' ? '✓ ' : ''}${type === 'error' ? '✗ ' : ''}${type === 'warning' ? '⚠ ' : ''}${type === 'info' ? 'ℹ ' : ''}</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    // Додаємо повідомлення до контейнера
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Ініціалізуємо Bootstrap Toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { 
+        autohide: true,
+        delay: 5000
+    });
+    
+    // Показуємо повідомлення
+    toast.show();
+    
+    // Видаляємо повідомлення після закриття
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
 }
