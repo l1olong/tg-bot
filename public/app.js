@@ -642,6 +642,14 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     const message = document.getElementById('message').value.trim();
     const includeContactInfo = document.getElementById('includeContactInfo').checked;
     
+    // Виводимо значення полів форми в консоль для налагодження
+    console.log('Form values:', {
+        type: type,
+        subject: subject,
+        message: message,
+        includeContactInfo: includeContactInfo
+    });
+    
     // Визначаємо контактну інформацію на основі чекбоксу
     let contactInfo;
     if (includeContactInfo) {
@@ -662,42 +670,49 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     let isValid = true;
     let errorMessages = [];
     
+    // Спочатку скидаємо всі попередні виділення помилок
+    resetFieldHighlights();
+    
     // Перевіряємо поле "Тип звернення"
     if (!type) {
         isValid = false;
-        errorMessages.push(currentLanguage === 'ua' 
+        const errorMsg = currentLanguage === 'ua' 
             ? 'Будь ласка, виберіть тип звернення' 
-            : 'Please select a feedback type');
-        highlightField('type');
+            : 'Please select a feedback type';
+        errorMessages.push(errorMsg);
+        highlightField('type', errorMsg);
     }
     
     // Перевіряємо поле "Тема"
     if (!subject) {
         isValid = false;
-        errorMessages.push(currentLanguage === 'ua' 
+        const errorMsg = currentLanguage === 'ua' 
             ? 'Будь ласка, вкажіть тему звернення' 
-            : 'Please enter a subject');
-        highlightField('subject');
+            : 'Please enter a subject';
+        errorMessages.push(errorMsg);
+        highlightField('subject', errorMsg);
     }
     
     // Перевіряємо поле "Повідомлення"
     if (!message) {
         isValid = false;
-        errorMessages.push(currentLanguage === 'ua' 
+        const errorMsg = currentLanguage === 'ua' 
             ? 'Будь ласка, введіть текст повідомлення' 
-            : 'Please enter a message');
-        highlightField('message');
+            : 'Please enter a message';
+        errorMessages.push(errorMsg);
+        highlightField('message', errorMsg);
     } else if (message.length < 10) {
         isValid = false;
-        errorMessages.push(currentLanguage === 'ua' 
+        const errorMsg = currentLanguage === 'ua' 
             ? 'Повідомлення має містити щонайменше 10 символів' 
-            : 'Message should be at least 10 characters long');
-        highlightField('message');
+            : 'Message should be at least 10 characters long';
+        errorMessages.push(errorMsg);
+        highlightField('message', errorMsg);
     }
     
     // Якщо є помилки валідації, показуємо їх і перериваємо відправку
     if (!isValid) {
-        // Показуємо перше повідомлення про помилку
+        // Показуємо перше повідомлення про помилку як спливаюче повідомлення
         showToast(errorMessages[0], 'error');
         return;
     }
@@ -705,7 +720,9 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     console.log('Submitting feedback with user data:', {
         currentUser: currentUser,
         tgUser: window.tgUser,
-        userId: userId
+        userId: userId,
+        includeContactInfo: includeContactInfo,
+        contactInfo: contactInfo
     });
 
     // Показуємо індикатор завантаження
@@ -714,12 +731,12 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     submitButton.disabled = true;
     submitButton.innerHTML = `
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Submitting...'}
+        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Надсилання...'}
     `;
 
     const formData = {
         type: type,
-        subject: subject || 'Без теми',
+        subject: subject, // Передаємо значення як є, без заміни на "Без теми"
         message: message,
         contactInfo: contactInfo,
         userId: userId // Використовуємо ID користувача Telegram
@@ -804,7 +821,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
 });
 
 // Функція для виділення поля з помилкою
-function highlightField(fieldId) {
+function highlightField(fieldId, message) {
     const field = document.getElementById(fieldId);
     if (field) {
         field.classList.add('is-invalid');
@@ -814,6 +831,15 @@ function highlightField(fieldId) {
             field.classList.remove('is-invalid');
             field.removeEventListener('focus', onFocus);
         });
+        
+        // Додаємо повідомлення про помилку
+        const feedbackElement = field.parentNode.querySelector('.invalid-feedback');
+        if (feedbackElement) {
+            feedbackElement.textContent = message;
+        } else {
+            const feedbackHtml = `<div class="invalid-feedback">${message}</div>`;
+            field.parentNode.insertAdjacentHTML('beforeend', feedbackHtml);
+        }
     }
 }
 
@@ -824,6 +850,10 @@ function resetFieldHighlights() {
         const field = document.getElementById(fieldId);
         if (field) {
             field.classList.remove('is-invalid');
+            const feedbackElement = field.parentNode.querySelector('.invalid-feedback');
+            if (feedbackElement) {
+                feedbackElement.remove();
+            }
         }
     });
 }
