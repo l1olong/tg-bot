@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Додаємо затримку для гарантії завантаження Telegram WebApp
     setTimeout(() => {
         initializeTelegramWebApp();
+        
+        // Додаємо анімацію елементів
+        animateElementsOnLoad();
     }, 500);
 });
 
@@ -460,20 +463,30 @@ function renderComplaint(complaint) {
     }
 
     return `
-        <div class="feedback-item ${complaint.type.toLowerCase()}">
+        <div class="feedback-item ${complaint.type.toLowerCase()} fade-in">
             <h6>
-                ${translations[currentLanguage][complaint.type.toLowerCase()]}
+                <span>
+                    <i class="fas fa-${complaint.type === 'complaint' ? 'exclamation-circle' : 'lightbulb'} me-2"></i>
+                    ${translations[currentLanguage][complaint.type.toLowerCase()]}
+                </span>
                 <span class="status ${complaint.status}">${translations[currentLanguage][complaint.status]}</span>
             </h6>
             <div class="feedback-subject"><strong>${translations[currentLanguage].subject}:</strong> ${complaint.subject || translations[currentLanguage].noSubject}</div>
             <div class="feedback-meta">
                 ${contactInfoDisplay}
-                ${complaint.adminResponse ? `<span class="badge bg-success ms-2">${translations[currentLanguage].answered}</span>` : ''}
+                <span class="ms-2"><i class="far fa-clock me-1"></i>${formatDate(complaint.date || complaint.createdAt)}</span>
+                ${complaint.adminResponse ? `<span class="badge bg-success ms-2"><i class="fas fa-reply me-1"></i>${translations[currentLanguage].answered}</span>` : ''}
             </div>
             <div class="mt-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="showComplaintDetails('${complaint._id || complaint.id}')">${translations[currentLanguage].details}</button>
+                <button class="btn btn-sm btn-outline-primary" onclick="showComplaintDetails('${complaint._id || complaint.id}')">
+                    <i class="fas fa-eye me-1"></i>
+                    ${translations[currentLanguage].details}
+                </button>
                 ${userRole === 'admin' && !complaint.adminResponse ? `
-                    <button class="btn btn-sm btn-primary ms-2" onclick="showResponseModal('${complaint._id || complaint.id}')">${translations[currentLanguage].answer}</button>
+                    <button class="btn btn-sm btn-primary ms-2" onclick="showResponseModal('${complaint._id || complaint.id}')">
+                        <i class="fas fa-reply me-1"></i>
+                        ${translations[currentLanguage].answer}
+                    </button>
                 ` : ''}
             </div>
         </div>
@@ -742,12 +755,8 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     // Показуємо індикатор завантаження
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML = `
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}
-    `;
-
+    const resetLoadingState = showLoadingState(submitButton, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
+    
     const formData = {
         type: type,
         subject: subject, // Передаємо значення як є, без заміни на "Без теми"
@@ -770,9 +779,8 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         });
 
         // Відновлюємо кнопку
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
-
+        resetLoadingState();
+        
         if (response.ok) {
             const responseData = await response.json();
             console.log('Complaint submitted successfully:', responseData);
@@ -822,8 +830,7 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         console.error('Error submitting feedback:', error);
         
         // Відновлюємо кнопку
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
+        resetLoadingState();
         
         showToast(
             currentLanguage === 'ua' 
@@ -952,8 +959,7 @@ async function sendResponse() {
         // Показуємо індикатор завантаження
         const sendResponseBtn = document.getElementById('sendResponseBtn');
         const originalButtonText = sendResponseBtn.innerHTML;
-        sendResponseBtn.disabled = true;
-        sendResponseBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}`;
+        const resetLoadingState = showLoadingState(sendResponseBtn, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
         
         const response = await fetch(`/api/complaints/${complaintId}`, {
             method: 'PUT',
@@ -966,8 +972,7 @@ async function sendResponse() {
         });
         
         // Відновлюємо кнопку
-        sendResponseBtn.disabled = false;
-        sendResponseBtn.innerHTML = originalButtonText;
+        resetLoadingState();
         
         if (response.ok) {
             console.log('Response sent successfully');
@@ -977,11 +982,14 @@ async function sendResponse() {
             const bsModal = bootstrap.Modal.getInstance(modal);
             bsModal.hide();
             
-            // Очищаємо форму
-            document.getElementById('responseForm').reset();
-            
             // Оновлюємо список звернень
             updateFeedbackList();
+            
+            // Якщо відкрита сторінка деталей, оновлюємо її
+            const detailsContainer = document.getElementById('complaintDetailsContainer');
+            if (detailsContainer.style.display !== 'none') {
+                showComplaintDetails(complaintId);
+            }
             
             // Показуємо повідомлення про успіх
             showToast(
@@ -991,24 +999,29 @@ async function sendResponse() {
                 'success'
             );
         } else {
-            console.error('Error sending response, status:', response.status);
-            
             let errorData;
             try {
                 errorData = await response.json();
             } catch (e) {
-                errorData = { error: 'Failed to parse error response' };
+                errorData = { error: 'Unknown error' };
             }
             
             showToast(
                 currentLanguage === 'ua' 
-                    ? 'Помилка при надсиланні відповіді: ' + (errorData.error || 'невідома помилка') 
+                    ? 'Помилка при надсиланні відповіді: ' + (errorData.error || 'невідома помилка')
                     : 'Error sending response: ' + (errorData.error || 'unknown error'),
                 'error'
             );
         }
     } catch (error) {
         console.error('Error sending response:', error);
+        
+        // Відновлюємо кнопку
+        const sendResponseBtn = document.getElementById('sendResponseBtn');
+        const originalButtonText = sendResponseBtn.innerHTML;
+        sendResponseBtn.disabled = false;
+        sendResponseBtn.innerHTML = originalButtonText;
+        
         showToast(
             currentLanguage === 'ua' 
                 ? 'Помилка при надсиланні відповіді: ' + error.message 
@@ -1039,105 +1052,135 @@ function showComplaintDetails(complaintId) {
     const mainContent = document.getElementById('mainContent');
     const detailsContainer = document.getElementById('complaintDetailsContainer');
     
-    mainContent.style.display = 'none';
-    
-    // Визначаємо, як відображати контактну інформацію
-    let contactInfoDisplay = '';
-    if (complaint.contactInfo) {
-        // Перевіряємо, чи це анонімне звернення
-        if (complaint.contactInfo === 'Анонімно' || complaint.contactInfo === 'Anonymous') {
-            contactInfoDisplay = `<em>${translations[currentLanguage].anonymous}</em>`;
+    // Додаємо анімацію переходу
+    mainContent.style.opacity = '0';
+    setTimeout(() => {
+        mainContent.style.display = 'none';
+        
+        // Визначаємо, як відображати контактну інформацію
+        let contactInfoDisplay = '';
+        if (complaint.contactInfo) {
+            // Перевіряємо, чи це анонімне звернення
+            if (complaint.contactInfo === 'Анонімно' || complaint.contactInfo === 'Anonymous') {
+                contactInfoDisplay = `<em>${translations[currentLanguage].anonymous}</em>`;
+            } else {
+                contactInfoDisplay = complaint.contactInfo;
+            }
         } else {
-            contactInfoDisplay = complaint.contactInfo;
+            contactInfoDisplay = `<em>${translations[currentLanguage].noContactInfo}</em>`;
         }
-    } else {
-        contactInfoDisplay = `<em>${translations[currentLanguage].noContactInfo}</em>`;
-    }
-    
-    // Рендеримо деталі звернення
-    detailsContainer.innerHTML = `
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">${translations[currentLanguage].complaintDetails}</h5>
-                <button class="btn btn-sm btn-outline-secondary" onclick="hideComplaintDetails()">
-                    <i class="fas fa-arrow-left"></i> ${translations[currentLanguage].back}
-                </button>
-            </div>
-            <div class="card-body">
-                <div class="complaint-details">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6>${translations[currentLanguage].feedbackType}</h6>
-                            <p>${translations[currentLanguage][complaint.type.toLowerCase()]}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>${translations[currentLanguage].status}</h6>
-                            <p><span class="badge ${complaint.status === 'new' ? 'bg-primary' : 'bg-success'}">${translations[currentLanguage][complaint.status]}</span></p>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>${translations[currentLanguage].subject}</h6>
-                        <p>${complaint.subject || translations[currentLanguage].noSubject}</p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>${translations[currentLanguage].message}</h6>
-                        <p>${complaint.message}</p>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6>${translations[currentLanguage].contactInfo}</h6>
-                            <p>${contactInfoDisplay}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>${translations[currentLanguage].date}</h6>
-                            <p>${formatDate(complaint.date || complaint.createdAt)}</p>
-                        </div>
-                    </div>
-                    
-                    ${complaint.adminResponse ? `
-                        <div class="admin-response mt-4">
-                            <h6>${translations[currentLanguage].adminResponse}</h6>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <p>${complaint.adminResponse.text}</p>
-                                    <small class="text-muted">${translations[currentLanguage].responseDate}: ${formatDate(complaint.adminResponse.date)}</small>
-                                </div>
+        
+        // Визначаємо іконку для типу звернення
+        const typeIcon = complaint.type === 'complaint' ? 'exclamation-circle' : 'lightbulb';
+        
+        // Рендеримо деталі звернення
+        detailsContainer.innerHTML = `
+            <div class="card fade-in">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-${typeIcon} me-2"></i>
+                        ${translations[currentLanguage].complaintDetails}
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="hideComplaintDetails()">
+                        <i class="fas fa-arrow-left me-1"></i> ${translations[currentLanguage].back}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="complaint-details">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-tag me-2"></i>${translations[currentLanguage].feedbackType}</h6>
+                                <p>${translations[currentLanguage][complaint.type.toLowerCase()]}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-info-circle me-2"></i>${translations[currentLanguage].status}</h6>
+                                <p><span class="badge ${complaint.status === 'new' ? 'bg-primary' : 'bg-success'}">${translations[currentLanguage][complaint.status]}</span></p>
                             </div>
                         </div>
-                    ` : ''}
-                    
-                    ${userRole === 'admin' && !complaint.adminResponse ? `
-                        <div class="mt-4">
-                            <button class="btn btn-primary" onclick="showResponseModal('${complaint._id || complaint.id}')">
-                                ${translations[currentLanguage].answer}
-                            </button>
+                        
+                        <div class="mb-3">
+                            <h6><i class="fas fa-heading me-2"></i>${translations[currentLanguage].subject}</h6>
+                            <p>${complaint.subject || translations[currentLanguage].noSubject}</p>
                         </div>
-                    ` : ''}
+                        
+                        <div class="mb-3">
+                            <h6><i class="fas fa-comment me-2"></i>${translations[currentLanguage].message}</h6>
+                            <p>${complaint.message}</p>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-user me-2"></i>${translations[currentLanguage].contactInfo}</h6>
+                                <p>${contactInfoDisplay}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="far fa-calendar-alt me-2"></i>${translations[currentLanguage].date}</h6>
+                                <p>${formatDate(complaint.date || complaint.createdAt)}</p>
+                            </div>
+                        </div>
+                        
+                        ${complaint.adminResponse ? `
+                            <div class="admin-response mt-4">
+                                <h6><i class="fas fa-reply me-2"></i>${translations[currentLanguage].adminResponse}</h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <p>${complaint.adminResponse.text}</p>
+                                        <small class="text-muted">
+                                            <i class="far fa-clock me-1"></i>
+                                            ${translations[currentLanguage].responseDate}: ${formatDate(complaint.adminResponse.date)}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${userRole === 'admin' && !complaint.adminResponse ? `
+                            <div class="mt-4">
+                                <button class="btn btn-primary" onclick="showResponseModal('${complaint._id || complaint.id}')">
+                                    <i class="fas fa-reply me-2"></i>
+                                    ${translations[currentLanguage].answer}
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    // Показуємо контейнер з деталями
-    detailsContainer.style.display = 'block';
-    
-    // Прокручуємо сторінку вгору
-    window.scrollTo(0, 0);
+        `;
+        
+        // Показуємо контейнер з деталями з анімацією
+        detailsContainer.style.display = 'block';
+        detailsContainer.style.opacity = '0';
+        
+        setTimeout(() => {
+            detailsContainer.style.opacity = '1';
+        }, 50);
+        
+        // Прокручуємо сторінку вгору
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }, 300);
 }
 
 // Функція для приховування деталей звернення і повернення до списку
 function hideComplaintDetails() {
     console.log('Hiding complaint details');
     
-    // Приховуємо деталі і показуємо основний контент
+    // Приховуємо деталі і показуємо основний контент з анімацією
     const detailsContainer = document.getElementById('complaintDetailsContainer');
     const mainContent = document.getElementById('mainContent');
     
-    detailsContainer.style.display = 'none';
-    mainContent.style.display = 'block';
+    detailsContainer.style.opacity = '0';
+    
+    setTimeout(() => {
+        detailsContainer.style.display = 'none';
+        mainContent.style.display = 'block';
+        
+        setTimeout(() => {
+            mainContent.style.opacity = '1';
+        }, 50);
+    }, 300);
 }
 
 // Функція для показу модального вікна відповіді
@@ -1170,23 +1213,12 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
         return;
     }
     
-    console.log('Sending response for complaint:', complaintId);
-    
     // Показуємо індикатор завантаження
     const sendButton = document.getElementById('sendResponseBtn');
     const originalButtonText = sendButton.innerHTML;
-    sendButton.disabled = true;
-    sendButton.innerHTML = `
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        ${currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...'}
-    `;
+    const resetLoadingState = showLoadingState(sendButton, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
     
     try {
-        console.log('Sending response with data:', {
-            complaintId: complaintId,
-            responseText: responseText
-        });
-        
         const response = await fetch(`/api/complaints/${complaintId}`, {
             method: 'PUT',
             headers: {
@@ -1196,11 +1228,10 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
             body: JSON.stringify({ response: responseText }),
             credentials: 'include'
         });
-
+        
         // Відновлюємо кнопку
-        sendButton.disabled = false;
-        sendButton.innerHTML = originalButtonText;
-
+        resetLoadingState();
+        
         if (response.ok) {
             const responseData = await response.json();
             console.log('Response submitted successfully:', responseData);
@@ -1244,6 +1275,8 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
         console.error('Error submitting response:', error);
         
         // Відновлюємо кнопку
+        const sendButton = document.getElementById('sendResponseBtn');
+        const originalButtonText = sendButton.innerHTML;
         sendButton.disabled = false;
         sendButton.innerHTML = originalButtonText;
         
@@ -1339,6 +1372,12 @@ function showToast(message, type = 'info') {
     // Створюємо унікальний ID для повідомлення
     const toastId = 'toast-' + Date.now();
     
+    // Визначаємо іконку для типу повідомлення
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'warning') icon = 'exclamation-triangle';
+    
     // Визначаємо клас для типу повідомлення
     let bgClass = 'bg-info';
     if (type === 'success') bgClass = 'bg-success';
@@ -1349,7 +1388,8 @@ function showToast(message, type = 'info') {
     const toastHtml = `
         <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header ${bgClass} text-white">
-                <strong class="me-auto">${type === 'success' ? '✓ ' : ''}${type === 'error' ? '✗ ' : ''}${type === 'warning' ? '⚠ ' : ''}${type === 'info' ? 'ℹ ' : ''}</strong>
+                <i class="fas fa-${icon} me-2"></i>
+                <strong class="me-auto">${type === 'success' ? 'Успішно' : ''}${type === 'error' ? 'Помилка' : ''}${type === 'warning' ? 'Увага' : ''}${type === 'info' ? 'Інформація' : ''}</strong>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
             <div class="toast-body">
@@ -1371,8 +1411,51 @@ function showToast(message, type = 'info') {
     // Показуємо повідомлення
     toast.show();
     
+    // Додаємо анімацію появи
+    toastElement.style.transform = 'translateY(20px)';
+    toastElement.style.opacity = '0';
+    
+    setTimeout(() => {
+        toastElement.style.transition = 'all 0.3s ease';
+        toastElement.style.transform = 'translateY(0)';
+        toastElement.style.opacity = '1';
+    }, 50);
+    
     // Видаляємо повідомлення після закриття
     toastElement.addEventListener('hidden.bs.toast', () => {
         toastElement.remove();
     });
+}
+
+// Додаємо функцію для анімації елементів при завантаженні сторінки
+function animateElementsOnLoad() {
+    const elements = document.querySelectorAll('.card, .feedback-item, .navbar');
+    
+    elements.forEach((element, index) => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(20px)';
+        element.style.transition = 'all 0.3s ease';
+        
+        setTimeout(() => {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, 100 + (index * 100));
+    });
+}
+
+// Додаємо функцію для показу стану завантаження на кнопках
+function showLoadingState(button, loadingText) {
+    const originalContent = button.innerHTML;
+    const originalDisabled = button.disabled;
+    
+    button.disabled = true;
+    button.innerHTML = `
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        ${loadingText}
+    `;
+    
+    return function() {
+        button.innerHTML = originalContent;
+        button.disabled = originalDisabled;
+    };
 }

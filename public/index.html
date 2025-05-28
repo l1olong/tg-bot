@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Feedback Portal</title>
+    <title>Система зворотного зв'язку</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
     <!-- Telegram Widget для авторизації (для зворотної сумісності) -->
     <script src="https://telegram.org/js/telegram-widget.js?22"></script>
@@ -13,95 +14,125 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Навігаційна панель -->
+    <nav class="navbar navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#">Customer Feedback Portal</a>
+            <a class="navbar-brand" href="#">
+                <i class="fab fa-telegram"></i>
+                <span>Customer Feedback Portal</span>
+            </a>
             <div class="d-flex align-items-center">
-                <!-- Закоментовано віджет авторизації Telegram, який показує білу плашку з "Username invalid" -->
-                <!--
-                <div id="telegram-login">
-                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
-                            data-telegram-login="${process.env.BOT_USERNAME}" 
-                            data-size="medium" 
-                            data-onauth="onTelegramAuth(user)"
-                            data-request-access="write"></script>
+                <div id="userInfo" class="text-light me-3"></div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-light" onclick="setLanguage('ua')">
+                        <span>🇺🇦 UA</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="setLanguage('en')">
+                        <span>🇺🇸 EN</span>
+                    </button>
                 </div>
-                -->
-                <button class="btn btn-outline-light ms-2 me-2" onclick="setLanguage('ua')">🇺🇦 UA</button>
-                <button class="btn btn-outline-light" onclick="setLanguage('en')">🇺🇸 EN</button>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container">
+        <!-- Мобільна навігація -->
+        <div class="d-md-none mb-4">
+            <div class="mobile-tabs d-flex">
+                <button class="mobile-tab active" data-target="feedbackFormSection">
+                    <i class="fas fa-edit"></i>
+                    <span data-translate="submitFeedback">Надіслати звернення</span>
+                </button>
+                <button class="mobile-tab" data-target="feedbackListSection">
+                    <i class="fas fa-list"></i>
+                    <span data-translate="feedbackList">Список звернень</span>
+                </button>
+                <button class="mobile-tab" data-target="faqSection">
+                    <i class="fas fa-question-circle"></i>
+                    <span data-translate="faqTitle">FAQ</span>
+                </button>
+            </div>
+        </div>
+
         <div id="mainContent">
             <div class="row">
-                <div class="col-md-4">
+                <!-- Форма зворотного зв'язку -->
+                <div class="col-md-4 tab-section active" id="feedbackFormSection">
                     <div class="card mb-4">
                         <div class="card-body">
-                            <h5 class="card-title" data-translate="submitFeedback">Submit Feedback</h5>
+                            <h5 class="card-title">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                <span data-translate="submitFeedback">Надіслати звернення</span>
+                            </h5>
                             <form id="feedbackForm">
                                 <div class="mb-3">
-                                    <label for="type" class="form-label" data-translate="feedbackType">Feedback Type</label>
+                                    <label for="type" class="form-label" data-translate="feedbackType">Тип звернення</label>
                                     <select class="form-select" id="type" required>
-                                        <option value="complaint" data-translate="complaint">Complaint</option>
-                                        <option value="suggestion" data-translate="suggestion">Suggestion</option>
+                                        <option value="complaint" data-translate="complaint">Скарга</option>
+                                        <option value="suggestion" data-translate="suggestion">Пропозиція</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="Theme" class="form-label" data-translate="subject">Subject</label>
+                                    <label for="subject" class="form-label" data-translate="subject">Тема</label>
                                     <input type="text" class="form-control" id="subject" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="message" class="form-label" data-translate="message">Message</label>
+                                    <label for="message" class="form-label" data-translate="message">Повідомлення</label>
                                     <textarea class="form-control" id="message" rows="4" required></textarea>
                                 </div>
                                 <div class="mb-3 form-check">
                                     <input type="checkbox" class="form-check-input" id="includeContactInfo" checked>
-                                    <label class="form-check-label" for="includeContactInfo" data-translate="includeContactInfo">Include my contact information</label>
+                                    <label class="form-check-label" for="includeContactInfo" data-translate="includeContactInfo">Додати мою контактну інформацію</label>
                                 </div>
-                                <button type="submit" class="btn btn-primary" data-translate="submit">Submit</button>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    <span data-translate="submit">Надіслати</span>
+                                </button>
                             </form>
                         </div>
                     </div>
 
-                    <div class="card">
+                    <!-- FAQ розділ для десктопу -->
+                    <div class="card d-none d-md-block">
                         <div class="card-body">
-                            <h5 class="card-title" data-translate="faqTitle">Frequently Asked Questions</h5>
+                            <h5 class="card-title">
+                                <i class="fas fa-question-circle me-2"></i>
+                                <span data-translate="faqTitle">Часті запитання</span>
+                            </h5>
                             <div class="accordion" id="faqAccordion">
                                 <div class="accordion-item">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                            <span data-translate="howToLeaveComplaint">How to leave a complaint?</span>
+                                            <span data-translate="howToLeaveComplaint">Як залишити скаргу?</span>
                                         </button>
                                     </h2>
                                     <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body" data-translate="faqAnswer1">
-                                            You can leave a complaint through the feedback form.
+                                            Ви можете залишити скаргу через форму зворотного зв'язку.
                                         </div>
                                     </div>
                                 </div>
                                 <div class="accordion-item">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                            <span data-translate="howToLeaveSuggestion">How to leave a suggestion?</span>
+                                            <span data-translate="howToLeaveSuggestion">Як залишити пропозицію?</span>
                                         </button>
                                     </h2>
                                     <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body" data-translate="faqAnswer2">
-                                            You can leave a suggestion using the same form.
+                                            Ви можете залишити пропозицію, використовуючи ту саму форму.
                                         </div>
                                     </div>
                                 </div>
                                 <div class="accordion-item">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                            <span data-translate="howToGetResponse">How to get a response?</span>
+                                            <span data-translate="howToGetResponse">Як отримати відповідь?</span>
                                         </button>
                                     </h2>
                                     <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                         <div class="accordion-body" data-translate="faqAnswer3">
-                                            The response is provided by the admin after reviewing the submission.
+                                            Відповідь надається адміністратором після розгляду звернення.
                                         </div>
                                     </div>
                                 </div>
@@ -109,42 +140,107 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-8">
+
+                <!-- Список звернень -->
+                <div class="col-md-8 tab-section" id="feedbackListSection">
                     <div class="card">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="card-title mb-0" data-translate="feedbackList">Feedback List</h5>
-                                <button class="btn btn-sm btn-outline-secondary" id="toggleFiltersBtn" data-translate="filters">Filters</button>
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    <span data-translate="feedbackList">Список звернень</span>
+                                </h5>
+                                <button class="btn btn-sm btn-outline-secondary" id="toggleFiltersBtn">
+                                    <i class="fas fa-filter me-1"></i>
+                                    <span data-translate="filters">Фільтри</span>
+                                </button>
                             </div>
                             
-                            <div id="filtersContainer" class="mb-3 p-3 border rounded" style="display: none;">
+                            <div id="filtersContainer" class="mb-3 p-3" style="display: none;">
                                 <div class="row g-2">
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 col-6">
                                         <div class="form-check">
-                                            <input class="form-check-input filter-checkbox" type="checkbox" id="complaintFilter" value="complaint" checked>
-                                            <label class="form-check-label" for="complaintFilter" data-translate="complaint">Complaint</label>
+                                            <input class="form-check-input" type="checkbox" id="complaintFilter" value="complaint" checked>
+                                            <label class="form-check-label" for="complaintFilter" data-translate="complaint">Скарга</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input filter-checkbox" type="checkbox" id="suggestionFilter" value="suggestion" checked>
-                                            <label class="form-check-label" for="suggestionFilter" data-translate="suggestion">Suggestion</label>
+                                            <input class="form-check-input" type="checkbox" id="suggestionFilter" value="suggestion" checked>
+                                            <label class="form-check-label" for="suggestionFilter" data-translate="suggestion">Пропозиція</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 col-6">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="answeredFilter">
-                                            <label class="form-check-label" for="answeredFilter" data-translate="showAnswered">Show with responses</label>
+                                            <label class="form-check-label" for="answeredFilter" data-translate="showAnswered">З відповідями</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 col-12 mt-2 mt-md-0">
                                         <select class="form-select form-select-sm" id="sortOrder">
-                                            <option value="newest" data-translate="newestFirst">Newest first</option>
-                                            <option value="oldest" data-translate="oldestFirst">Oldest first</option>
+                                            <option value="newest" data-translate="newestFirst">Спочатку нові</option>
+                                            <option value="oldest" data-translate="oldestFirst">Спочатку старі</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div id="feedbackList"></div>
+                            <div id="feedbackList">
+                                <!-- Тут будуть відображатися звернення -->
+                                <div class="d-flex justify-content-center my-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Завантаження...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ розділ для мобільних -->
+                <div class="col-md-8 tab-section" id="faqSection">
+                    <div class="card d-md-none">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-question-circle me-2"></i>
+                                <span data-translate="faqTitle">Часті запитання</span>
+                            </h5>
+                            <div class="accordion" id="faqAccordionMobile">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqMobile1">
+                                            <span data-translate="howToLeaveComplaint">Як залишити скаргу?</span>
+                                        </button>
+                                    </h2>
+                                    <div id="faqMobile1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordionMobile">
+                                        <div class="accordion-body" data-translate="faqAnswer1">
+                                            Ви можете залишити скаргу через форму зворотного зв'язку.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqMobile2">
+                                            <span data-translate="howToLeaveSuggestion">Як залишити пропозицію?</span>
+                                        </button>
+                                    </h2>
+                                    <div id="faqMobile2" class="accordion-collapse collapse" data-bs-parent="#faqAccordionMobile">
+                                        <div class="accordion-body" data-translate="faqAnswer2">
+                                            Ви можете залишити пропозицію, використовуючи ту саму форму.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqMobile3">
+                                            <span data-translate="howToGetResponse">Як отримати відповідь?</span>
+                                        </button>
+                                    </h2>
+                                    <div id="faqMobile3" class="accordion-collapse collapse" data-bs-parent="#faqAccordionMobile">
+                                        <div class="accordion-body" data-translate="faqAnswer3">
+                                            Відповідь надається адміністратором після розгляду звернення.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,12 +251,31 @@
         <div id="complaintDetailsContainer" class="mt-4" style="display: none;"></div>
     </div>
 
-    <!-- Модальне вікно для відповіді адміністратора -->
+    <!-- Повідомлення про необхідність відкрити через Telegram -->
+    <div id="telegramRequiredMsg" class="container mt-5 text-center" style="display: none;">
+        <div class="alert alert-warning p-5">
+            <h4 class="alert-heading mb-4">
+                <i class="fab fa-telegram me-2"></i>
+                <span>Потрібен Telegram</span>
+            </h4>
+            <p>Будь ласка, відкрийте цей додаток через Telegram, натиснувши відповідну кнопку у боті.</p>
+            <hr>
+            <p class="mb-0">Цей додаток працює тільки як міні-додаток всередині Telegram.</p>
+            <div class="mt-4">
+                <img src="https://telegram.org/img/t_logo.svg" alt="Telegram Logo" width="64" height="64">
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно для відповіді на звернення -->
     <div class="modal fade" id="responseModal" tabindex="-1" aria-labelledby="responseModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="responseModalLabel" data-translate="yourResponse">Ваша відповідь</h5>
+                    <h5 class="modal-title" id="responseModalLabel">
+                        <i class="fas fa-reply me-2"></i>
+                        <span data-translate="yourResponse">Ваша відповідь</span>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -174,14 +289,101 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancel">Скасувати</button>
-                    <button type="button" class="btn btn-primary" id="sendResponseBtn" data-translate="send">Надіслати</button>
+                    <button type="button" class="btn btn-primary" id="sendResponseBtn">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        <span data-translate="send">Надіслати</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Скрипти -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
     <script src="/app.js"></script>
+
+    <!-- Додаємо стилі для мобільної навігації -->
+    <style>
+        .mobile-tabs {
+            display: flex;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        .mobile-tab {
+            flex: 1;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            background: none;
+            border: none;
+            color: #333;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .mobile-tab i {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .mobile-tab.active {
+            color: #0088cc;
+            background-color: rgba(0, 136, 204, 0.05);
+        }
+        
+        .mobile-tab:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+        
+        .tab-section {
+            display: none;
+        }
+        
+        .tab-section.active {
+            display: block;
+        }
+        
+        @media (min-width: 768px) {
+            .tab-section {
+                display: block !important;
+            }
+        }
+    </style>
+
+    <!-- Додаємо скрипт для мобільної навігації -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileTabs = document.querySelectorAll('.mobile-tab');
+            
+            mobileTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Видаляємо активний клас з усіх вкладок
+                    mobileTabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Додаємо активний клас до поточної вкладки
+                    this.classList.add('active');
+                    
+                    // Отримуємо цільову секцію
+                    const targetId = this.getAttribute('data-target');
+                    
+                    // Приховуємо всі секції
+                    document.querySelectorAll('.tab-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Показуємо цільову секцію
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
