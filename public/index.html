@@ -51,6 +51,11 @@
                     <i class="fas fa-question-circle"></i>
                     <span data-translate="faqTitle">FAQ</span>
                 </button>
+                <!-- Додаємо вкладку профілю для мобільної навігації -->
+                <button class="mobile-tab" data-target="profileSection">
+                    <i class="fas fa-user"></i>
+                    <span data-translate="profileTitle">Профіль</span>
+                </button>
             </div>
         </div>
 
@@ -238,6 +243,37 @@
                                         <div class="accordion-body" data-translate="faqAnswer3">
                                             Відповідь надається адміністратором після розгляду звернення.
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Профіль користувача -->
+                <div class="col-md-4 tab-section" id="profileSection">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-user me-2"></i>
+                                <span data-translate="profileTitle">Профіль користувача</span>
+                            </h5>
+                            <div id="userProfileContent" class="text-center">
+                                <div class="mb-4">
+                                    <div class="profile-photo-container mb-3">
+                                        <img id="userProfilePhoto" src="/default-avatar.png" alt="User Photo" class="rounded-circle img-thumbnail profile-photo">
+                                    </div>
+                                    <h4 id="userProfileName">Завантаження...</h4>
+                                    <div class="badge bg-primary mb-3" id="userProfileRole">user</div>
+                                </div>
+                                <div class="user-info-container">
+                                    <div class="user-info-item">
+                                        <span data-translate="userIdLabel">ID користувача:</span>
+                                        <span id="userProfileId" class="text-muted">-</span>
+                                    </div>
+                                    <div class="user-info-item">
+                                        <span data-translate="userAuthTimeLabel">Час авторизації:</span>
+                                        <span id="userProfileAuthTime" class="text-muted">-</span>
                                     </div>
                                 </div>
                             </div>

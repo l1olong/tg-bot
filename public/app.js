@@ -346,6 +346,105 @@ function updateUI() {
     adminControls.forEach(el => {
         el.style.display = userRole === 'admin' ? 'block' : 'none';
     });
+    
+    // Оновлюємо інформацію в профілі користувача
+    updateUserProfile();
+}
+
+// Функція для оновлення інформації в профілі користувача
+function updateUserProfile() {
+    console.log('Updating user profile information');
+    
+    // Отримуємо дані користувача
+    let userData;
+    
+    // Спочатку перевіряємо, чи є дані користувача Telegram
+    if (window.tgUser) {
+        userData = window.tgUser;
+        console.log('Using Telegram user data for profile:', userData);
+    } else {
+        // Якщо немає даних Telegram, спробуємо отримати з localStorage
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                userData = JSON.parse(storedUser);
+                console.log('Using stored user data for profile:', userData);
+            }
+        } catch (error) {
+            console.error('Error getting user data from storage:', error);
+        }
+    }
+    
+    // Якщо немає даних користувача, показуємо повідомлення
+    if (!userData) {
+        console.warn('No user data available for profile');
+        document.getElementById('userProfileName').textContent = 
+            currentLanguage === 'ua' ? 'Користувач не авторизований' : 'User not authenticated';
+        return;
+    }
+    
+    // Оновлюємо фото користувача
+    const profilePhoto = document.getElementById('userProfilePhoto');
+    if (profilePhoto) {
+        if (userData.photo_url) {
+            profilePhoto.src = userData.photo_url;
+        } else {
+            // Використовуємо FontAwesome для аватара за замовчуванням замість зображення
+            profilePhoto.style.display = 'none';
+            const photoContainer = document.querySelector('.profile-photo-container');
+            if (photoContainer) {
+                // Перевіряємо, чи вже є іконка за замовчуванням
+                if (!photoContainer.querySelector('.default-avatar-icon')) {
+                    photoContainer.innerHTML = `
+                        <div class="default-avatar-icon">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                    `;
+                }
+            }
+        }
+    }
+    
+    // Оновлюємо ім'я користувача
+    const profileName = document.getElementById('userProfileName');
+    if (profileName) {
+        profileName.textContent = userData.first_name || userData.username || 
+            (currentLanguage === 'ua' ? 'Невідомий користувач' : 'Unknown user');
+    }
+    
+    // Оновлюємо роль користувача
+    const profileRole = document.getElementById('userProfileRole');
+    if (profileRole) {
+        const role = userData.role || currentUser.role || 'user';
+        profileRole.textContent = role;
+        
+        // Змінюємо колір бейджа в залежності від ролі
+        if (role === 'admin') {
+            profileRole.className = 'badge bg-danger mb-3';
+        } else if (role === 'moderator') {
+            profileRole.className = 'badge bg-warning mb-3';
+        } else {
+            profileRole.className = 'badge bg-primary mb-3';
+        }
+    }
+    
+    // Оновлюємо ID користувача
+    const profileId = document.getElementById('userProfileId');
+    if (profileId) {
+        profileId.textContent = userData.id || '-';
+    }
+    
+    // Оновлюємо час авторизації
+    const profileAuthTime = document.getElementById('userProfileAuthTime');
+    if (profileAuthTime && userData.auth_time) {
+        // Форматуємо дату
+        const authDate = new Date(userData.auth_time);
+        profileAuthTime.textContent = authDate.toLocaleString(
+            currentLanguage === 'ua' ? 'uk-UA' : 'en-US'
+        );
+    } else if (profileAuthTime) {
+        profileAuthTime.textContent = '-';
+    }
 }
 
 const translations = {
@@ -771,13 +870,12 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         const response = await fetch('/api/complaints', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userId}` // Використовуємо ID користувача Telegram
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(formData),
-            credentials: 'include' // Важливо для передачі сесійних куків
+            credentials: 'include'
         });
-
+        
         // Відновлюємо кнопку
         resetLoadingState();
         
@@ -1458,4 +1556,41 @@ function showLoadingState(button, loadingText) {
         button.innerHTML = originalContent;
         button.disabled = originalDisabled;
     };
+}
+
+// Функція для ініціалізації мобільних вкладок
+function initializeMobileTabs() {
+    const mobileTabs = document.querySelectorAll('.mobile-tab');
+    
+    mobileTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Видаляємо активний клас з усіх вкладок
+            mobileTabs.forEach(t => t.classList.remove('active'));
+            
+            // Додаємо активний клас до поточної вкладки
+            this.classList.add('active');
+            
+            // Отримуємо цільову секцію
+            const targetId = this.getAttribute('data-target');
+            
+            // Приховуємо всі секції
+            document.querySelectorAll('.tab-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Показуємо цільову секцію
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+    
+    // Оновлюємо вкладки відповідно до ролі користувача
+    updateMobileTabsForRole();
+}
+
+// Функція для оновлення мобільних вкладок відповідно до ролі користувача
+function updateMobileTabsForRole() {
+    const adminTab = document.querySelector('.mobile-tab[data-target="feedbackListSection"]');
+    if (adminTab) {
+        adminTab.style.display = userRole === 'admin' ? 'block' : 'none';
+    }
 }
