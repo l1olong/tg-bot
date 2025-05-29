@@ -271,9 +271,23 @@
                                         <span data-translate="userIdLabel">ID користувача:</span>
                                         <span id="userProfileId" class="text-muted">-</span>
                                     </div>
-                                    <div class="user-info-item">
+                                    <!-- <div class="user-info-item">
                                         <span data-translate="userAuthTimeLabel">Час авторизації:</span>
                                         <span id="userProfileAuthTime" class="text-muted">-</span>
+                                    </div> -->
+                                    <!-- Додаємо статистику звернень користувача -->
+                                    <div class="user-complaints-stats mt-3">
+                                        <h6 data-translate="userComplaintsStats">Статистика звернень:</h6>
+                                        <div class="d-flex justify-content-center gap-3 mt-2">
+                                            <div class="stats-item">
+                                                <div class="stats-count" id="activeComplaintsCount">0</div>
+                                                <div class="stats-label" data-translate="activeComplaints">Активні</div>
+                                            </div>
+                                            <div class="stats-item">
+                                                <div class="stats-count" id="answeredComplaintsCount">0</div>
+                                                <div class="stats-label" data-translate="answeredComplaints">З відповідями</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
