@@ -506,8 +506,7 @@ body {
     background: white;
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
-    min-width: 100px;
-    max-width: 150px;
+    width: 150px;
     transition: var(--transition);
 }
 

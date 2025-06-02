@@ -583,7 +583,7 @@ const translations = {
         complaintsStats: 'Статистика',
         totalComplaints: 'Всього звернень',
         activeComplaints: 'Активні звернення',
-        answeredComplaints: 'З відповіддю',
+        answeredComplaints: 'Звернення з відповіддю',
         showMore: 'Показати більше',
         showLess: 'Згорнути',
     },
@@ -632,7 +632,7 @@ const translations = {
         complaintsStats: 'Statistics',
         totalComplaints: 'Total Appeal',
         activeComplaints: 'Active Appeal',
-        answeredComplaints: 'With responses',
+        answeredComplaints: 'Appeal with responses',
         showMore: 'Show More',
         showLess: 'Show Less',
     }
