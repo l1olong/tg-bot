@@ -455,6 +455,20 @@ function updateUserProfile() {
 function updateUserComplaintsStats() {
     console.log('Updating user complaints statistics');
     
+    // Отримуємо елемент контейнера статистики
+    const statsContainer = document.querySelector('.complaints-stats-container');
+    
+    // Перевіряємо, чи є користувач адміністратором
+    const isAdmin = currentUser.role === 'admin' || document.querySelector('.badge.bg-danger') !== null;
+    
+    // Якщо користувач - адміністратор, приховуємо статистику
+    if (isAdmin && statsContainer) {
+        statsContainer.style.display = 'none';
+        return;
+    } else if (statsContainer) {
+        statsContainer.style.display = 'block';
+    }
+    
     // Перевіряємо, чи є звернення
     if (!allComplaints || allComplaints.length === 0) {
         console.log('No complaints available for statistics');
@@ -561,7 +575,17 @@ const translations = {
         howToLeaveSuggestion: 'Як залишити пропозицію?',
         faqAnswer2: 'Ви можете залишити пропозицію, використовуючи ту саму форму.',
         howToGetResponse: 'Як отримати відповідь?',
-        faqAnswer3: 'Відповідь надається адміністратором після розгляду звернення.'
+        faqAnswer3: 'Відповідь надається адміністратором після розгляду звернення.',
+        profile: 'Профіль',
+        userProfile: 'Профіль користувача',
+        userId: 'ID користувача',
+        authTime: 'Час авторизації',
+        complaintsStats: 'Статистика звернень',
+        totalComplaints: 'Всього звернень',
+        activeComplaints: 'Активні звернення',
+        answeredComplaints: 'Відповіді отримано',
+        showMore: 'Показати більше',
+        showLess: 'Згорнути',
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -600,7 +624,17 @@ const translations = {
         howToLeaveSuggestion: 'How to leave a suggestion?',
         faqAnswer2: 'You can leave a suggestion using the same form.',
         howToGetResponse: 'How to get a response?',
-        faqAnswer3: 'The response is provided by the admin after reviewing the submission.'
+        faqAnswer3: 'The response is provided by the admin after reviewing the submission.',
+        profile: 'Profile',
+        userProfile: 'User Profile',
+        userId: 'User ID',
+        authTime: 'Authentication Time',
+        complaintsStats: 'Complaints Statistics',
+        totalComplaints: 'Total Complaints',
+        activeComplaints: 'Active Complaints',
+        answeredComplaints: 'Replied Complaints',
+        showMore: 'Show More',
+        showLess: 'Show Less',
     }
 };
 
