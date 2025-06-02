@@ -493,31 +493,34 @@ function initializeStatsToggle() {
         return;
     }
     
-    // Додаємо обробник для кнопки
-    toggleStatsBtn.addEventListener('click', function() {
-        toggleStatsDetails();
-    });
+    // Ініціалізуємо стан (початково деталі приховані)
+    statsDetails.style.display = 'none';
+    statsDetails.style.height = '0';
+    statsDetails.style.overflow = 'hidden';
+    statsDetails.style.transition = 'height 0.3s ease, opacity 0.3s ease';
     
-    // Додаємо обробник для всього заголовка (для кращого UX)
-    statsHeader.addEventListener('click', function(event) {
-        // Перевіряємо, що клік не був на самій кнопці (щоб уникнути подвійного спрацювання)
-        if (event.target !== toggleStatsBtn && !toggleStatsBtn.contains(event.target)) {
-            toggleStatsDetails();
-        }
-    });
-    
-    // Функція для перемикання видимості деталей
     function toggleStatsDetails() {
         if (statsDetails.style.display === 'none') {
+            // Розгортаємо деталі
             statsDetails.style.display = 'block';
+            statsDetails.style.height = statsDetails.scrollHeight + 'px';
+            statsDetails.style.opacity = '1';
             toggleStatsBtn.querySelector('i').classList.remove('fa-chevron-down');
             toggleStatsBtn.querySelector('i').classList.add('fa-chevron-up');
         } else {
-            statsDetails.style.display = 'none';
+            // Згортаємо деталі
+            statsDetails.style.height = '0';
+            statsDetails.style.opacity = '0';
+            setTimeout(() => {
+                statsDetails.style.display = 'none';
+            }, 300);
             toggleStatsBtn.querySelector('i').classList.remove('fa-chevron-up');
             toggleStatsBtn.querySelector('i').classList.add('fa-chevron-down');
         }
     }
+    
+    // Додаємо обробник події
+    toggleStatsBtn.addEventListener('click', toggleStatsDetails);
 }
 
 const translations = {
@@ -1436,7 +1439,7 @@ document.getElementById('sendResponseBtn').addEventListener('click', async () =>
             responseModal.hide();
             
             // Оновлюємо список звернень
-            await loadComplaints();
+            updateFeedbackList();
             
             // Якщо відкрита сторінка деталей, оновлюємо її
             const detailsContainer = document.getElementById('complaintDetailsContainer');
