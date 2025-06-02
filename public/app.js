@@ -618,7 +618,7 @@ const translations = {
         noSubject: 'No subject',
         noContactInfo: 'Not specified',
         anonymous: 'Anonymous',
-        faqTitle: 'Frequently Asked Questions',
+        faqTitle: 'FAQ',
         howToLeaveComplaint: 'How to leave a complaint?',
         faqAnswer1: 'You can leave a complaint through the feedback form.',
         howToLeaveSuggestion: 'How to leave a suggestion?',
