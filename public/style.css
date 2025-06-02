@@ -473,6 +473,58 @@ body {
   border-bottom: none;
 }
 
+/* Стилі для статистики звернень */
+.user-complaints-stats {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.stats-header {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.stats-total-count {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.stats-toggle {
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.stats-toggle:hover {
+  color: var(--primary-color);
+}
+
+.stats-details {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  transition: var(--transition);
+}
+
+.stats-item {
+  text-align: center;
+  padding: 0.5rem;
+  min-width: 80px;
+}
+
+.stats-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.stats-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* Анімації */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -492,7 +544,6 @@ body {
   background: #f1f1f1;
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 10px;

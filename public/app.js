@@ -457,24 +457,67 @@ function updateUserComplaintsStats() {
     // Перевіряємо, чи є звернення
     if (!allComplaints || allComplaints.length === 0) {
         console.log('No complaints available for statistics');
+        document.getElementById('totalComplaintsCount').textContent = '0';
         document.getElementById('activeComplaintsCount').textContent = '0';
         document.getElementById('answeredComplaintsCount').textContent = '0';
         return;
     }
     
     // Рахуємо кількість активних та відповідених звернень
+    const totalComplaints = allComplaints.length;
     const activeComplaints = allComplaints.filter(complaint => !complaint.adminResponse).length;
     const answeredComplaints = allComplaints.filter(complaint => complaint.adminResponse).length;
     
     console.log('Complaints statistics:', {
-        total: allComplaints.length,
+        total: totalComplaints,
         active: activeComplaints,
         answered: answeredComplaints
     });
     
     // Оновлюємо відображення на сторінці
+    document.getElementById('totalComplaintsCount').textContent = totalComplaints;
     document.getElementById('activeComplaintsCount').textContent = activeComplaints;
     document.getElementById('answeredComplaintsCount').textContent = answeredComplaints;
+}
+
+// Функція для ініціалізації кнопки розгортання/згортання статистики звернень
+function initializeStatsToggle() {
+    console.log('Initializing stats toggle button');
+    
+    const toggleStatsBtn = document.getElementById('toggleStatsBtn');
+    const statsHeader = document.getElementById('statsHeader');
+    const statsDetails = document.getElementById('statsDetails');
+    
+    if (!toggleStatsBtn || !statsHeader || !statsDetails) {
+        console.warn('Stats toggle elements not found in the DOM');
+        return;
+    }
+    
+    // Додаємо обробник для кнопки
+    toggleStatsBtn.addEventListener('click', function() {
+        toggleStatsDetails();
+    });
+    
+    // Додаємо обробник для всього заголовка (для кращого UX)
+    statsHeader.addEventListener('click', function(event) {
+        // Перевіряємо, що клік не був на самій кнопці (щоб уникнути подвійного спрацювання)
+        if (event.target !== toggleStatsBtn && !toggleStatsBtn.contains(event.target)) {
+            toggleStatsDetails();
+        }
+    });
+    
+    // Функція для перемикання видимості деталей
+    function toggleStatsDetails() {
+        if (statsDetails.style.display === 'none') {
+            statsDetails.style.display = 'block';
+            toggleStatsBtn.querySelector('i').classList.remove('fa-chevron-down');
+            toggleStatsBtn.querySelector('i').classList.add('fa-chevron-up');
+        } else {
+            statsDetails.style.display = 'none';
+            toggleStatsBtn.querySelector('i').classList.remove('fa-chevron-up');
+            toggleStatsBtn.querySelector('i').classList.add('fa-chevron-down');
+        }
+    }
 }
 
 const translations = {
