@@ -49,6 +49,7 @@ function initializeTelegramWebApp() {
         if (initializeUserFromStorage()) {
             console.log('User initialized from storage, continuing without Telegram WebApp');
             initializeFilters();
+            initializeStatsToggle();
             loadComplaints();
         } else {
             showTelegramRequiredMessage();
