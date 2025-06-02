@@ -753,13 +753,30 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     const userId = window.tgUser?.id || currentUser.id;
     
     if (!userId) {
-        showToast(
-            currentLanguage === 'ua' 
-                ? 'Будь ласка, увійдіть через Telegram, щоб надсилати звернення' 
-                : 'Please login with Telegram to submit feedback',
-            'warning'
-        );
-        return;
+        // Спробуємо ініціалізувати користувача з localStorage перед показом помилки
+        if (initializeUserFromStorage()) {
+            console.log('User initialized from storage during form submission');
+            // Повторно отримуємо userId після ініціалізації
+            const updatedUserId = window.tgUser?.id || currentUser.id;
+            
+            if (!updatedUserId) {
+                showToast(
+                    currentLanguage === 'ua' 
+                        ? 'Будь ласка, увійдіть через Telegram, щоб надсилати звернення' 
+                        : 'Please login with Telegram to submit feedback',
+                    'warning'
+                );
+                return;
+            }
+        } else {
+            showToast(
+                currentLanguage === 'ua' 
+                    ? 'Будь ласка, увійдіть через Telegram, щоб надсилати звернення' 
+                    : 'Please login with Telegram to submit feedback',
+                'warning'
+            );
+            return;
+        }
     }
     
     // Отримуємо значення полів форми
