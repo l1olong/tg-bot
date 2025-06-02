@@ -560,7 +560,7 @@ const translations = {
         send: 'Надіслати',
         cancel: 'Скасувати',
         filters: 'Фільтри',
-        showAnswered: 'Показувати з відповідями',
+        showAnswered: 'Лише з відповіддю',
         newestFirst: 'Спочатку нові',
         oldestFirst: 'Спочатку старі',
         details: 'Деталі',
@@ -586,6 +586,12 @@ const translations = {
         answeredComplaints: 'Звернення з відповіддю',
         showMore: 'Показати більше',
         showLess: 'Згорнути',
+        dateFilter: 'Фільтр за датою',
+        selectDate: 'Оберіть дату',
+        startDate: 'Початкова дата',
+        endDate: 'Кінцева дата',
+        clearFilter: 'Очистити',
+        noFeedback: 'Немає звернень',
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -609,7 +615,7 @@ const translations = {
         send: 'Send',
         cancel: 'Cancel',
         filters: 'Filters',
-        showAnswered: 'Show with responses',
+        showAnswered: 'Only with response',
         newestFirst: 'Newest first',
         oldestFirst: 'Oldest first',
         details: 'Details',
@@ -635,6 +641,12 @@ const translations = {
         answeredComplaints: 'Appeal with responses',
         showMore: 'Show More',
         showLess: 'Show Less',
+        dateFilter: 'Date filter',
+        selectDate: 'Select date',
+        startDate: 'Start date',
+        endDate: 'End date',
+        clearFilter: 'Clear',
+        noFeedback: 'No feedback',
     }
 };
 
@@ -788,11 +800,19 @@ function filterAndDisplayComplaints() {
     const answeredFilterChecked = document.getElementById('answeredFilter').checked;
     const sortOrder = document.getElementById('sortOrder').value;
     
+    // Get date filter values
+    const singleDateValue = document.getElementById('singleDateFilter').value;
+    const startDateValue = document.getElementById('startDateFilter').value;
+    const endDateValue = document.getElementById('endDateFilter').value;
+    
     console.log('Filter settings:', {
         complaints: complaintFilterChecked,
         suggestions: suggestionFilterChecked,
         answered: answeredFilterChecked,
-        sortOrder: sortOrder
+        sortOrder: sortOrder,
+        singleDate: singleDateValue,
+        startDate: startDateValue,
+        endDate: endDateValue
     });
     
     let filteredComplaints = allComplaints.filter(complaint => {
@@ -800,6 +820,32 @@ function filterAndDisplayComplaints() {
         if (complaint.type === 'suggestion' && !suggestionFilterChecked) return false;
         
         if (answeredFilterChecked && !complaint.adminResponse) return false;
+        
+        // Apply date filtering
+        const complaintDate = new Date(complaint.date || complaint.createdAt);
+        
+        // Format complaint date to YYYY-MM-DD for comparison
+        const complaintDateFormatted = complaintDate.toISOString().split('T')[0];
+        
+        // Single date filter
+        if (singleDateValue) {
+            return complaintDateFormatted === singleDateValue;
+        }
+        
+        // Date range filter
+        if (startDateValue && endDateValue) {
+            return complaintDateFormatted >= startDateValue && complaintDateFormatted <= endDateValue;
+        }
+        
+        // Start date only
+        if (startDateValue) {
+            return complaintDateFormatted >= startDateValue;
+        }
+        
+        // End date only
+        if (endDateValue) {
+            return complaintDateFormatted <= endDateValue;
+        }
         
         return true;
     });
@@ -857,6 +903,102 @@ function initializeFilters() {
     document.getElementById('suggestionFilter').addEventListener('change', filterAndDisplayComplaints);
     document.getElementById('answeredFilter').addEventListener('change', filterAndDisplayComplaints);
     document.getElementById('sortOrder').addEventListener('change', filterAndDisplayComplaints);
+    
+    // Initialize date pickers if Flatpickr is available
+    if (typeof flatpickr !== 'undefined') {
+        // Configure single date picker
+        const singleDatePicker = flatpickr('#singleDateFilter', {
+            dateFormat: 'Y-m-d',
+            locale: currentLanguage === 'ua' ? 'uk' : 'en',
+            onChange: function(selectedDates) {
+                // Clear range date pickers when single date is selected
+                if (selectedDates.length > 0) {
+                    startDatePicker.clear();
+                    endDatePicker.clear();
+                }
+                filterAndDisplayComplaints();
+            }
+        });
+        
+        // Configure start date picker
+        const startDatePicker = flatpickr('#startDateFilter', {
+            dateFormat: 'Y-m-d',
+            locale: currentLanguage === 'ua' ? 'uk' : 'en',
+            onChange: function(selectedDates) {
+                // Clear single date picker when range date is selected
+                if (selectedDates.length > 0) {
+                    singleDatePicker.clear();
+                    
+                    // Set the minimum date for end date picker
+                    endDatePicker.set('minDate', selectedDates[0]);
+                }
+                filterAndDisplayComplaints();
+            }
+        });
+        
+        // Configure end date picker
+        const endDatePicker = flatpickr('#endDateFilter', {
+            dateFormat: 'Y-m-d',
+            locale: currentLanguage === 'ua' ? 'uk' : 'en',
+            onChange: function(selectedDates) {
+                // Clear single date picker when range date is selected
+                if (selectedDates.length > 0) {
+                    singleDatePicker.clear();
+                    
+                    // Set the maximum date for start date picker
+                    startDatePicker.set('maxDate', selectedDates[0]);
+                }
+                filterAndDisplayComplaints();
+            }
+        });
+        
+        // Add event listener for clear button
+        document.getElementById('clearDateFilter').addEventListener('click', () => {
+            singleDatePicker.clear();
+            startDatePicker.clear();
+            endDatePicker.clear();
+            
+            // Reset min/max constraints
+            startDatePicker.set('maxDate', null);
+            endDatePicker.set('minDate', null);
+            
+            filterAndDisplayComplaints();
+        });
+    } else {
+        // Fallback to native date inputs if Flatpickr is not available
+        const singleDateInput = document.getElementById('singleDateFilter');
+        const startDateInput = document.getElementById('startDateFilter');
+        const endDateInput = document.getElementById('endDateFilter');
+        
+        // Set input type to date for native date pickers
+        singleDateInput.type = 'date';
+        startDateInput.type = 'date';
+        endDateInput.type = 'date';
+        
+        // Add event listeners
+        singleDateInput.addEventListener('change', () => {
+            startDateInput.value = '';
+            endDateInput.value = '';
+            filterAndDisplayComplaints();
+        });
+        
+        startDateInput.addEventListener('change', () => {
+            singleDateInput.value = '';
+            filterAndDisplayComplaints();
+        });
+        
+        endDateInput.addEventListener('change', () => {
+            singleDateInput.value = '';
+            filterAndDisplayComplaints();
+        });
+        
+        document.getElementById('clearDateFilter').addEventListener('click', () => {
+            singleDateInput.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
+            filterAndDisplayComplaints();
+        });
+    }
 }
 
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
@@ -1062,11 +1204,14 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         console.error('Error submitting feedback:', error);
         
         // Відновлюємо кнопку
-        resetLoadingState();
+        const sendButton = e.target.querySelector('button[type="submit"]');
+        const originalButtonText = sendButton.innerHTML;
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalButtonText;
         
         showToast(
             currentLanguage === 'ua' 
-                ? 'Помилка при надсиланні звернення: ' + error.message
+                ? 'Помилка при надсиланні звернення: ' + error.message 
                 : 'Error submitting feedback: ' + error.message,
             'error'
         );
@@ -1250,10 +1395,10 @@ async function sendResponse() {
         console.error('Error sending response:', error);
         
         // Відновлюємо кнопку
-        const sendResponseBtn = document.getElementById('sendResponseBtn');
-        const originalButtonText = sendResponseBtn.innerHTML;
-        sendResponseBtn.disabled = false;
-        sendResponseBtn.innerHTML = originalButtonText;
+        const sendButton = document.getElementById('sendResponseBtn');
+        const originalButtonText = sendButton.innerHTML;
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalButtonText;
         
         showToast(
             currentLanguage === 'ua' 
