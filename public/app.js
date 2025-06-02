@@ -485,31 +485,30 @@ function initializeStatsToggle() {
     console.log('Initializing stats toggle button');
     
     const toggleStatsBtn = document.getElementById('toggleStatsBtn');
-    const statsHeader = document.getElementById('statsHeader');
     const statsDetails = document.getElementById('statsDetails');
     
-    if (!toggleStatsBtn || !statsHeader || !statsDetails) {
+    if (!toggleStatsBtn || !statsDetails) {
         console.warn('Stats toggle elements not found in the DOM');
         return;
     }
     
     // Ініціалізуємо стан (початково деталі приховані)
     statsDetails.style.display = 'none';
-    statsDetails.style.height = '0';
+    statsDetails.style.maxHeight = '0';
     statsDetails.style.overflow = 'hidden';
-    statsDetails.style.transition = 'height 0.3s ease, opacity 0.3s ease';
+    statsDetails.style.transition = 'max-height 0.3s ease, opacity 0.3s ease';
     
     function toggleStatsDetails() {
         if (statsDetails.style.display === 'none') {
             // Розгортаємо деталі
             statsDetails.style.display = 'block';
-            statsDetails.style.height = statsDetails.scrollHeight + 'px';
+            statsDetails.style.maxHeight = statsDetails.scrollHeight + 'px';
             statsDetails.style.opacity = '1';
             toggleStatsBtn.querySelector('i').classList.remove('fa-chevron-down');
             toggleStatsBtn.querySelector('i').classList.add('fa-chevron-up');
         } else {
             // Згортаємо деталі
-            statsDetails.style.height = '0';
+            statsDetails.style.maxHeight = '0';
             statsDetails.style.opacity = '0';
             setTimeout(() => {
                 statsDetails.style.display = 'none';
@@ -1153,12 +1152,13 @@ async function sendResponse() {
         return;
     }
     
+    // Показуємо індикатор завантаження
+    const sendResponseBtn = document.getElementById('sendResponseBtn');
+    const originalButtonText = sendResponseBtn.innerHTML;
+    const resetLoadingState = showLoadingState(sendResponseBtn, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
+    
     try {
         // Показуємо індикатор завантаження
-        const sendResponseBtn = document.getElementById('sendResponseBtn');
-        const originalButtonText = sendResponseBtn.innerHTML;
-        const resetLoadingState = showLoadingState(sendResponseBtn, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
-        
         const response = await fetch(`/api/complaints/${complaintId}`, {
             method: 'PUT',
             headers: {
