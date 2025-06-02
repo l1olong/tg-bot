@@ -884,10 +884,14 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     try {
         console.log('Sending complaint with data:', formData);
         
+        // Отримуємо актуальний ID користувача після можливої ініціалізації з localStorage
+        const currentUserId = window.tgUser?.id || currentUser.id;
+        
         const response = await fetch('/api/complaints', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUserId}` // Додаємо токен авторизації
             },
             body: JSON.stringify(formData),
             credentials: 'include'
