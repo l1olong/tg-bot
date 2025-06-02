@@ -445,6 +445,36 @@ function updateUserProfile() {
     } else if (profileAuthTime) {
         profileAuthTime.textContent = '-';
     }
+    
+    // Оновлюємо статистику звернень
+    updateUserComplaintsStats();
+}
+
+// Функція для оновлення статистики звернень у профілі користувача
+function updateUserComplaintsStats() {
+    console.log('Updating user complaints statistics');
+    
+    // Перевіряємо, чи є звернення
+    if (!allComplaints || allComplaints.length === 0) {
+        console.log('No complaints available for statistics');
+        document.getElementById('activeComplaintsCount').textContent = '0';
+        document.getElementById('answeredComplaintsCount').textContent = '0';
+        return;
+    }
+    
+    // Рахуємо кількість активних та відповідених звернень
+    const activeComplaints = allComplaints.filter(complaint => !complaint.adminResponse).length;
+    const answeredComplaints = allComplaints.filter(complaint => complaint.adminResponse).length;
+    
+    console.log('Complaints statistics:', {
+        total: allComplaints.length,
+        active: activeComplaints,
+        answered: answeredComplaints
+    });
+    
+    // Оновлюємо відображення на сторінці
+    document.getElementById('activeComplaintsCount').textContent = activeComplaints;
+    document.getElementById('answeredComplaintsCount').textContent = answeredComplaints;
 }
 
 const translations = {
@@ -654,6 +684,9 @@ async function loadComplaints() {
         });
         
         filterAndDisplayComplaints();
+        
+        // Оновлюємо статистику звернень у профілі користувача
+        updateUserComplaintsStats();
     } catch (error) {
         console.error('Error loading complaints:', error);
         const feedbackList = document.getElementById('feedbackList');
@@ -1507,7 +1540,7 @@ function showToast(message, type = 'info') {
     const toastHtml = `
         <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header ${bgClass} text-white">
-                <i class="fas fa-${icon} me-2"></i>
+                <i class="${type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}"></i>
                 <strong class="me-auto">${type === 'success' ? 'Успішно' : ''}${type === 'error' ? 'Помилка' : ''}${type === 'warning' ? 'Увага' : ''}${type === 'info' ? 'Інформація' : ''}</strong>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
