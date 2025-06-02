@@ -425,26 +425,51 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileTabs = document.querySelectorAll('.mobile-tab');
             
+            function switchTab(targetId) {
+                // Hide all sections
+                document.querySelectorAll('.tab-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show target section
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                    
+                    // Initialize stats toggle if switching to profile section
+                    if (targetId === 'profileSection') {
+                        // Use setTimeout to ensure DOM is updated
+                        setTimeout(() => {
+                            if (typeof initializeStatsToggle === 'function') {
+                                initializeStatsToggle();
+                            }
+                        }, 50);
+                    }
+                }
+            }
+            
             mobileTabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // Видаляємо активний клас з усіх вкладок
+                    // Remove active class from all tabs
                     mobileTabs.forEach(t => t.classList.remove('active'));
                     
-                    // Додаємо активний клас до поточної вкладки
+                    // Add active class to current tab
                     this.classList.add('active');
                     
-                    // Отримуємо цільову секцію
+                    // Get target section and switch to it
                     const targetId = this.getAttribute('data-target');
-                    
-                    // Приховуємо всі секції
-                    document.querySelectorAll('.tab-section').forEach(section => {
-                        section.classList.remove('active');
-                    });
-                    
-                    // Показуємо цільову секцію
-                    document.getElementById(targetId).classList.add('active');
+                    switchTab(targetId);
                 });
             });
+            
+            // Initialize stats toggle if profile is the default active tab
+            if (document.getElementById('profileSection')?.classList.contains('active')) {
+                setTimeout(() => {
+                    if (typeof initializeStatsToggle === 'function') {
+                        initializeStatsToggle();
+                    }
+                }, 100);
+            }
         });
     </script>
 </body>

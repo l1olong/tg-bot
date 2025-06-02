@@ -1604,7 +1604,7 @@ function showToast(message, type = 'info') {
     const toastElement = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastElement, { 
         autohide: true,
-        delay: 5000
+        delay: 3000
     });
     
     // Показуємо повідомлення
@@ -1693,5 +1693,117 @@ function updateMobileTabsForRole() {
     const adminTab = document.querySelector('.mobile-tab[data-target="feedbackListSection"]');
     if (adminTab) {
         adminTab.style.display = userRole === 'admin' ? 'block' : 'none';
+    }
+}
+
+// Функція для перемикання між вкладками
+function switchTab(tabId) {
+    // Приховуємо всі вкладки
+    document.querySelectorAll('.tab-section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    // Показуємо вибрану вкладку
+    const activeTab = document.getElementById(tabId);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        
+        // Якщо це вкладка профілю, ініціалізуємо перемикач статистики
+        if (tabId === 'profileSection') {
+            // Використовуємо setTimeout, щоб дати DOM час для оновлення
+            setTimeout(() => {
+                initializeStatsToggle();
+            }, 50);
+        }
+    }
+}
+
+// Оновлюємо обробники подій для мобільних вкладок
+function initializeMobileTabs() {
+    const mobileTabs = document.querySelectorAll('.mobile-tab');
+    
+    mobileTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Видаляємо активний клас з усіх вкладок
+            mobileTabs.forEach(t => t.classList.remove('active'));
+            
+            // Додаємо активний клас до поточної вкладки
+            this.classList.add('active');
+            
+            // Отримуємо цільову секцію
+            const targetId = this.getAttribute('data-target');
+            
+            // Перемикаємо вкладку
+            switchTab(targetId);
+        });
+    });
+    
+    // Оновлюємо вкладки відповідно до ролі користувача
+    updateMobileTabsForRole();
+}
+
+// Оновлюємо функцію ініціалізації перемикача статистики
+function initializeStatsToggle() {
+    console.log('Initializing stats toggle button');
+    
+    const toggleStatsBtn = document.getElementById('toggleStatsBtn');
+    const statsDetails = document.getElementById('statsDetails');
+    
+    if (!toggleStatsBtn || !statsDetails) {
+        console.warn('Stats toggle elements not found in the DOM');
+        return;
+    }
+    
+    // Видаляємо попередні обробники подій, щоб уникнути дублювання
+    const newToggleBtn = toggleStatsBtn.cloneNode(true);
+    toggleStatsBtn.parentNode.replaceChild(newToggleBtn, toggleStatsBtn);
+    
+    // Ініціалізуємо стан (початково деталі приховані)
+    statsDetails.style.display = 'none';
+    statsDetails.style.maxHeight = '0';
+    statsDetails.style.overflow = 'hidden';
+    statsDetails.style.transition = 'max-height 0.3s ease, opacity 0.3s ease';
+    
+    function toggleStatsDetails() {
+        if (statsDetails.style.display === 'none') {
+            // Розгортаємо деталі
+            statsDetails.style.display = 'block';
+            // Встановлюємо висоту перед анімацією
+            requestAnimationFrame(() => {
+                statsDetails.style.maxHeight = statsDetails.scrollHeight + 'px';
+                statsDetails.style.opacity = '1';
+            });
+            newToggleBtn.querySelector('i').classList.remove('fa-chevron-down');
+            newToggleBtn.querySelector('i').classList.add('fa-chevron-up');
+        } else {
+            // Згортаємо деталі
+            statsDetails.style.maxHeight = '0';
+            statsDetails.style.opacity = '0';
+            setTimeout(() => {
+                if (statsDetails.style.maxHeight === '0px') {
+                    statsDetails.style.display = 'none';
+                }
+            }, 300);
+            newToggleBtn.querySelector('i').classList.remove('fa-chevron-up');
+            newToggleBtn.querySelector('i').classList.add('fa-chevron-down');
+        }
+    }
+    
+    // Додаємо обробник події для кнопки
+    newToggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleStatsDetails();
+    });
+    
+    // Додаємо обробник для всього заголовка (для кращого UX)
+    const statsHeader = document.getElementById('statsHeader');
+    if (statsHeader) {
+        statsHeader.addEventListener('click', (e) => {
+            // Якщо клік не на кнопці, перемикаємо стан
+            if (e.target !== newToggleBtn && !newToggleBtn.contains(e.target)) {
+                toggleStatsDetails();
+            }
+        });
     }
 }
