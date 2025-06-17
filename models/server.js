@@ -98,7 +98,7 @@ const adminOnlyAuth = async (req, res, next) => { // Додаємо async
   return res.status(403).json({ error: 'Admin access required' });
 };
 
-app.get('/api/admins', adminOnlyAuth, async (req, res) => {
+app.get('/api/admins', auth,adminOnlyAuth, async (req, res) => {
   try {
       const admins = await Admin.find().sort({ addedAt: -1 });
       const mainAdminId = process.env.ADMIN_ID;
@@ -117,7 +117,7 @@ app.get('/api/admins', adminOnlyAuth, async (req, res) => {
 });
 
 // 2. Додати нового адміністратора
-app.post('/api/admins', adminOnlyAuth, async (req, res) => {
+app.post('/api/admins', auth, adminOnlyAuth, async (req, res) => {
   try {
       const { telegramId } = req.body;
       if (!telegramId || !/^\d+$/.test(telegramId)) {
@@ -142,7 +142,7 @@ app.post('/api/admins', adminOnlyAuth, async (req, res) => {
 });
 
 // 3. Видалити адміністратора
-app.delete('/api/admins/:telegramId', adminOnlyAuth, async (req, res) => {
+app.delete('/api/admins/:telegramId', auth, adminOnlyAuth, async (req, res) => {
   try {
       const { telegramId } = req.params;
       const mainAdminId = process.env.ADMIN_ID;
