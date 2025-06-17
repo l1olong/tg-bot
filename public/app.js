@@ -13,6 +13,8 @@ let currentUser = {
 let isAuthenticated = false;
 let userRole = 'user';
 
+let adminManagementModal, addAdminModal;
+
 // Глобальна змінна для зберігання даних користувача Telegram
 window.tgUser = null;
 
@@ -26,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Встановлюємо українську мову при завантаженні сторінки
     setLanguage('ua');
 
+    adminManagementModal = new bootstrap.Modal(document.getElementById('adminManagementModal'));
+    addAdminModal = new bootstrap.Modal(document.getElementById('addAdminModal'));
+
     // Додаємо затримку для гарантії завантаження Telegram WebApp
     setTimeout(() => {
         initializeTelegramWebApp();
@@ -33,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Додаємо анімацію елементів
         animateElementsOnLoad();
     }, 500);
+
+    document.getElementById('manageAdminsBtn')?.addEventListener('click', openAdminManagementModal);
+    document.getElementById('showAddAdminModalBtn')?.addEventListener('click', openAddAdminModal);
+    document.getElementById('saveNewAdminBtn')?.addEventListener('click', saveNewAdmin);
 });
 
 // Функція для ініціалізації Telegram WebApp
@@ -449,9 +458,147 @@ function updateUserProfile() {
     } else if (profileAuthTime) {
         profileAuthTime.textContent = '-';
     }
+
+    const manageAdminsBtn = document.getElementById('manageAdminsBtn');
+    if (manageAdminsBtn) {
+        manageAdminsBtn.parentElement.style.display = currentUser.role === 'admin' ? 'block' : 'none';
+    }
     
     // Оновлюємо статистику звернень
     updateUserComplaintsStats();
+}
+
+// 1. Відкрити головне вікно керування
+async function openAdminManagementModal() {
+    adminManagementModal.show();
+    const container = document.getElementById('adminListContainer');
+    container.innerHTML = `<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div></div>`;
+
+    try {
+        const response = await fetch('/api/admins', {
+            headers: { 'Authorization': `Bearer ${currentUser.id}` }
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch admins');
+
+        const admins = await response.json();
+        renderAdminList(admins);
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = `<li class="list-group-item text-danger">Помилка завантаження списку.</li>`;
+    }
+}
+
+// 2. Відобразити список адміністраторів
+function renderAdminList(admins) {
+    const container = document.getElementById('adminListContainer');
+    if (admins.length === 0) {
+        container.innerHTML = `<li class="list-group-item">Список адміністраторів порожній.</li>`;
+        return;
+    }
+
+    container.innerHTML = admins.map(admin => `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="me-2">${admin.username || '...'}</strong>
+                <small class="text-muted">ID: ${admin.telegramId}</small>
+                ${admin.isMainAdmin ? `<span class="badge bg-danger ms-2" data-translate="mainAdmin">Головний адмін</span>` : ''}
+            </div>
+            ${!admin.isMainAdmin ? `
+                <button class="btn btn-outline-danger btn-sm delete-admin-btn" data-id="${admin.telegramId}" data-username="${admin.username}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            ` : ''}
+        </li>
+    `).join('');
+
+    // Додаємо обробники подій для кнопок видалення
+    container.querySelectorAll('.delete-admin-btn').forEach(button => {
+        button.addEventListener('click', handleDeleteAdminClick);
+    });
+}
+
+// 3. Обробник кліку на кнопку видалення
+function handleDeleteAdminClick(event) {
+    const button = event.currentTarget;
+    const adminId = button.dataset.id;
+    const adminUsername = button.dataset.username || 'цього користувача';
+
+    const confirmationMessage = currentLanguage === 'ua'
+        ? `Ви впевнені, що хочете видалити "${adminUsername}" зі списку адміністраторів?`
+        : `Are you sure you want to remove "${adminUsername}" from the administrators list?`;
+
+    if (confirm(confirmationMessage)) {
+        deleteAdmin(adminId);
+    }
+}
+
+// 4. Функція видалення адміністратора
+async function deleteAdmin(telegramId) {
+    try {
+        const response = await fetch(`/api/admins/${telegramId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${currentUser.id}` }
+        });
+        
+        if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.error || 'Failed to delete admin');
+        }
+        
+        showToast(currentLanguage === 'ua' ? 'Адміністратора видалено.' : 'Admin deleted.', 'success');
+        openAdminManagementModal(); // Оновити список
+    } catch (error) {
+        console.error(error);
+        showToast(error.message, 'error');
+    }
+}
+
+// 5. Відкрити вікно додавання адміна
+function openAddAdminModal() {
+    document.getElementById('addAdminForm').reset();
+    adminManagementModal.hide(); // Ховаємо перше вікно
+    addAdminModal.show();        // Показуємо друге
+}
+
+// 6. Зберегти нового адміністратора
+async function saveNewAdmin() {
+    const newAdminIdInput = document.getElementById('newAdminId');
+    const telegramId = newAdminIdInput.value.trim();
+
+    if (!telegramId) {
+        showToast(currentLanguage === 'ua' ? 'Введіть Telegram ID.' : 'Please enter a Telegram ID.', 'error');
+        return;
+    }
+
+    const saveButton = document.getElementById('saveNewAdminBtn');
+    const resetLoadingState = showLoadingState(saveButton, '...');
+
+    try {
+        const response = await fetch('/api/admins', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.id}`
+            },
+            body: JSON.stringify({ telegramId })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to add admin');
+        }
+
+        showToast(currentLanguage === 'ua' ? 'Нового адміністратора додано.' : 'New admin added successfully.', 'success');
+        addAdminModal.hide(); // Ховаємо вікно додавання
+        openAdminManagementModal(); // Відкриваємо та оновлюємо список
+
+    } catch (error) {
+        console.error(error);
+        showToast(error.message, 'error');
+    } finally {
+        resetLoadingState();
+    }
 }
 
 // Функція для оновлення статистики звернень у профілі користувача
@@ -596,7 +743,16 @@ const translations = {
         clearFilter: 'Очистити',
         noFeedback: 'Немає звернень',
         totalComplaintsLabel: 'Загалом скарг',
-        totalSuggestionsLabel: 'Загалом пропозицій'
+        totalSuggestionsLabel: 'Загалом пропозицій',
+        manageAdmins: 'Керування адміністраторами',
+        adminListTitle: 'Список адміністраторів',
+        close: 'Закрити',
+        addAdminTitle: 'Додати нового адміністратора',
+        newAdminIdLabel: 'Telegram ID користувача',
+        newAdminIdHelp: 'Ви можете отримати ID користувача за допомогою спеціальних ботів, наприклад, @userinfobot.',
+        add: 'Додати',
+        delete: 'Видалити',
+        mainAdmin: 'Головний адмін'
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -653,7 +809,16 @@ const translations = {
         clearFilter: 'Clear',
         noFeedback: 'No feedback',
         totalComplaintsLabel: 'Total Complaints',
-        totalSuggestionsLabel: 'Total Suggestions'
+        totalSuggestionsLabel: 'Total Suggestions',
+        manageAdmins: 'Manage Admins',
+        adminListTitle: 'Administrator List',
+        close: 'Close',
+        addAdminTitle: 'Add New Administrator',
+        newAdminIdLabel: 'User Telegram ID',
+        newAdminIdHelp: 'You can get a user\'s ID via special bots, e.g., @userinfobot.',
+        add: 'Add',
+        delete: 'Delete',
+        mainAdmin: 'Main Admin',
     }
 };
 

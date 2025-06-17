@@ -311,6 +311,12 @@
                                         <span data-translate="userId">ID користувача:</span>
                                         <span id="userProfileId" class="text-muted">-</span>
                                     </div>
+                                    <div class="d-grid gap-2 mt-4 admin-only" style="display: none;">
+                                        <button class="btn btn-outline-danger" id="manageAdminsBtn">
+                                            <i class="fas fa-user-shield me-2"></i>
+                                            <span data-translate="manageAdmins">Керування адміністраторами</span>
+                                        </button>
+                                    </div>          
                                     <!-- Статистика звернень -->
                                     <div class="complaints-stats-container mt-4">
                                         <h6 class="mb-3" data-translate="complaintsStats">Статистика звернень</h6>
@@ -389,6 +395,53 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="adminManagementModal" tabindex="-1" aria-labelledby="adminManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adminManagementModalLabel" data-translate="adminListTitle">Список адміністраторів</h5>
+                    <button type="button" class="btn btn-primary btn-sm" id="showAddAdminModalBtn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group" id="adminListContainer">
+                        <!-- Сюди буде завантажуватися список адмінів -->
+                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="close">Закрити</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальне вікно 2: Додавання нового адміністратора -->
+    <div class="modal fade" id="addAdminModal" tabindex="-1" aria-labelledby="addAdminModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAdminModalLabel" data-translate="addAdminTitle">Додати нового адміністратора</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAdminForm">
+                        <div class="mb-3">
+                            <label for="newAdminId" class="form-label" data-translate="newAdminIdLabel">Telegram ID користувача</label>
+                            <input type="text" class="form-control" id="newAdminId" placeholder="Наприклад: 123456789" required>
+                            <div class="form-text" data-translate="newAdminIdHelp">Ви можете отримати ID користувача за допомогою спеціальних ботів, наприклад, @userinfobot.</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancel">Скасувати</button>
+                    <button type="button" class="btn btn-primary" id="saveNewAdminBtn" data-translate="add">Додати</button>
+                </div>
+            </div>
+        </div>
+    </div>    
 
     <!-- Скрипти -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

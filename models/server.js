@@ -13,6 +13,7 @@ const tls = require('tls');
 const { isAdmin } = require('../controllers/controllers');
 const validateTelegramWebAppData = require('../utils/validateTelegramWebAppData');
 const { analyzeSubmissionText } = require('../services/geminiService');
+const Admin = require('../models/Admin');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
@@ -89,18 +90,88 @@ const auth = (req, res, next) => {
   return res.status(401).json({ error: 'Authentication required' });
 };
 
+const adminOnlyAuth = (req, res, next) => {
+  // Використовуємо вашу існуючу функцію isAdmin для перевірки
+  // Отримуємо ID з сесії або токена
+  const userId = req.user?.id;
+  if (userId && isAdmin(userId)) {
+      return next(); // Користувач - адмін, продовжуємо
+  }
+  // Якщо не адмін, повертаємо помилку доступу
+  return res.status(403).json({ error: 'Admin access required' });
+};
+
+app.get('/api/admins', adminOnlyAuth, async (req, res) => {
+  try {
+      const admins = await Admin.find().sort({ addedAt: -1 });
+      const mainAdminId = process.env.ADMIN_ID;
+
+      // Додаємо прапорець, щоб на фронтенді знати, хто є головним адміном
+      const adminsWithFlag = admins.map(admin => ({
+          ...admin.toObject(),
+          isMainAdmin: admin.telegramId === mainAdminId
+      }));
+      
+      res.json(adminsWithFlag);
+  } catch (error) {
+      console.error('Error fetching admins:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 2. Додати нового адміністратора
+app.post('/api/admins', adminOnlyAuth, async (req, res) => {
+  try {
+      const { telegramId } = req.body;
+      if (!telegramId || !/^\d+$/.test(telegramId)) {
+          return res.status(400).json({ error: 'Valid Telegram ID is required.' });
+      }
+
+      // Перевіряємо, чи такий адмін вже існує
+      const existingAdmin = await Admin.findOne({ telegramId });
+      if (existingAdmin) {
+          return res.status(409).json({ error: 'This user is already an admin.' });
+      }
+
+      // Створюємо нового адміна (ім'я буде додано пізніше)
+      const newAdmin = new Admin({ telegramId });
+      await newAdmin.save();
+
+      res.status(201).json(newAdmin);
+  } catch (error) {
+      console.error('Error adding admin:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 3. Видалити адміністратора
+app.delete('/api/admins/:telegramId', adminOnlyAuth, async (req, res) => {
+  try {
+      const { telegramId } = req.params;
+      const mainAdminId = process.env.ADMIN_ID;
+
+      // --- ЗАХИСТ: НЕ ДОЗВОЛЯЄМО ВИДАЛИТИ ГОЛОВНОГО АДМІНА ---
+      if (telegramId === mainAdminId) {
+          return res.status(403).json({ error: 'Cannot delete the main administrator.' });
+      }
+
+      const result = await Admin.deleteOne({ telegramId });
+
+      if (result.deletedCount === 0) {
+          return res.status(404).json({ error: 'Admin not found.' });
+      }
+
+      res.status(200).json({ success: true, message: 'Admin deleted successfully.' });
+  } catch (error) {
+      console.error('Error deleting admin:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Маршрут для автентифікації через Telegram WebApp
-app.post('/api/auth', (req, res) => {
+app.post('/api/auth', async (req, res) => {
   try {
     const { telegramUser, initData } = req.body;
-    
-    console.log('Received auth request:', { 
-      telegramUser: telegramUser ? { 
-        id: telegramUser.id, 
-        username: telegramUser.username || telegramUser.first_name 
-      } : null,
-      initDataLength: initData ? initData.length : 0
-    });
     
     // Перевіряємо наявність даних користувача
     if (!telegramUser || !telegramUser.id) {
@@ -113,38 +184,36 @@ app.post('/api/auth', (req, res) => {
     if (initData) {
       try {
         isValidData = validateTelegramWebAppData(initData, process.env.TELEGRAM_TOKEN);
-        console.log('Telegram data validation result:', isValidData);
       } catch (validationError) {
         console.error('Error validating Telegram data:', validationError);
         isValidData = false;
       }
       
-      // У виробничому середовищі вимагаємо валідні дані
-      // У розробці дозволяємо тестування без валідації
       if (!isValidData && process.env.NODE_ENV === 'production') {
-        console.error('Invalid Telegram data signature');
         return res.status(401).json({ error: 'Invalid Telegram data' });
       }
     } else {
-      console.warn('No initData provided, skipping validation');
-      // У виробничому середовищі вимагаємо initData
       if (process.env.NODE_ENV === 'production') {
-        console.error('Missing initData in production environment');
         return res.status(400).json({ error: 'Missing Telegram initialization data' });
       }
     }
     
+    // Визначаємо userId та перевіряємо, чи є він адміном
     const userId = telegramUser.id.toString();
-    
-    // Перевіряємо, чи є користувач адміністратором
-    const adminId = process.env.ADMIN_ID;
     const userIsAdmin = isAdmin(userId);
     
-    console.log('User role check:', { 
-      userId: userId, 
-      adminId: adminId,
-      isAdmin: userIsAdmin
-    });
+    console.log('User role check:', { userId, isAdmin: userIsAdmin });
+    
+    // --- ПРАВИЛЬНЕ МІСЦЕ ДЛЯ ОНОВЛЕННЯ ДАНИХ АДМІНА ---
+    // Якщо користувач є адміном, оновлюємо/створюємо його запис у колекції 'admins'
+    if (userIsAdmin) {
+        await Admin.findOneAndUpdate(
+            { telegramId: userId },
+            { username: telegramUser.username || telegramUser.first_name },
+            { upsert: true } // Якщо запис не знайдено, створити його. Це додасть головного адміна в список при першому вході.
+        );
+        console.log(`Admin [${userId}] username updated/verified.`);
+    }
     
     // Зберігаємо дані користувача в сесії
     req.session.user = {
@@ -155,12 +224,9 @@ app.post('/api/auth', (req, res) => {
       auth_time: new Date().toISOString()
     };
     
-    console.log('User saved to session:', {
-      id: userId,
-      username: telegramUser.username || telegramUser.first_name,
-      role: userIsAdmin ? 'admin' : 'user'
-    });
+    console.log('User saved to session:', { id: userId, role: userIsAdmin ? 'admin' : 'user' });
     
+    // Повертаємо успішну відповідь
     res.json({
       success: true,
       user: {
@@ -170,6 +236,7 @@ app.post('/api/auth', (req, res) => {
         role: userIsAdmin ? 'admin' : 'user'
       }
     });
+
   } catch (error) {
     console.error('Authentication error:', error);
     res.status(500).json({ error: 'Authentication failed', details: error.message });
