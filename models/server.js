@@ -98,6 +98,16 @@ const adminOnlyAuth = async (req, res, next) => { // Додаємо async
   return res.status(403).json({ error: 'Admin access required' });
 };
 
+const mainAdminOnlyAuth = (req, res, next) => {
+  const userId = req.user?.id;
+  // Сувора перевірка: ID користувача має точно співпадати з ID в .env
+  if (userId && userId === process.env.ADMIN_ID) {
+      return next(); // Користувач - головний адмін, продовжуємо
+  }
+  // Всім іншим, навіть звичайним адмінам, відмовляємо в доступі
+  return res.status(403).json({ error: 'Main administrator access required.' });
+};
+
 app.get('/api/admins', auth,adminOnlyAuth, async (req, res) => {
   try {
       const admins = await Admin.find().sort({ addedAt: -1 });
@@ -142,7 +152,7 @@ app.post('/api/admins', auth, adminOnlyAuth, async (req, res) => {
 });
 
 // 3. Видалити адміністратора
-app.delete('/api/admins/:telegramId', auth, adminOnlyAuth, async (req, res) => {
+app.delete('/api/admins/:telegramId', auth, mainAdminOnlyAuth, async (req, res) => {
   try {
       const { telegramId } = req.params;
       const mainAdminId = process.env.ADMIN_ID;
@@ -196,7 +206,8 @@ app.post('/api/auth', async (req, res) => {
     }
    
     const userId = telegramUser.id.toString();
-    const userIsAdmin = await isAdmin(userId); 
+    const userIsAdmin = await isAdmin(userId);
+    const isMainAdmin = userId === process.env.ADMIN_ID;
     
     console.log('User role check:', { userId, isAdmin: userIsAdmin });
     
@@ -216,6 +227,7 @@ app.post('/api/auth', async (req, res) => {
       username: telegramUser.username || telegramUser.first_name,
       photo_url: telegramUser.photo_url,
       role: userIsAdmin ? 'admin' : 'user',
+      isMainAdmin: isMainAdmin,
       auth_time: new Date().toISOString()
     };
     
@@ -227,7 +239,8 @@ app.post('/api/auth', async (req, res) => {
         id: userId,
         username: telegramUser.username || telegramUser.first_name,
         photo_url: telegramUser.photo_url,
-        role: userIsAdmin ? 'admin' : 'user'
+        role: userIsAdmin ? 'admin' : 'user',
+        isMainAdmin: isMainAdmin
       }
     });
 

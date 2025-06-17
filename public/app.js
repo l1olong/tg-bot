@@ -6,7 +6,8 @@ const socket = io({
 let currentLanguage = 'ua';
 let currentUser = {
     id: null,
-    role: 'user'
+    role: 'user',
+    isMainAdmin: false
 };
 
 // Authentication state
@@ -221,6 +222,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
                 currentUser.role = data.user.role;
                 isAuthenticated = true;
                 userRole = data.user.role;
+                currentUser.isMainAdmin = data.user.isMainAdmin;
                 
                 // Переконуємося, що window.tgUser завжди містить актуальні дані
                 if (!window.tgUser || window.tgUser.id !== telegramUser.id) {
@@ -459,9 +461,9 @@ function updateUserProfile() {
         profileAuthTime.textContent = '-';
     }
 
-    const manageAdminsBtn = document.getElementById('manageAdminsBtn');
-    if (manageAdminsBtn) {
-        manageAdminsBtn.parentElement.style.display = currentUser.role === 'admin' ? 'block' : 'none';
+    const manageAdminsBtnContainer = document.querySelector('#manageAdminsBtn')?.parentElement;
+    if (manageAdminsBtnContainer) {
+        manageAdminsBtnContainer.style.display = currentUser.role === 'admin' ? 'block' : 'none';
     }
     
     // Оновлюємо статистику звернень
