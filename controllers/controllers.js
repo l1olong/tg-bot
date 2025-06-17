@@ -20,10 +20,10 @@ function getMainKeyboard(lang) {
   };
 }
 
-// Функція для перевірки, чи є користувач адміністратором
-function isAdmin(userId) {
-  return userId && (userId.toString() === ADMIN_ID || userId === ADMIN_ID);
-}
+// // Функція для перевірки, чи є користувач адміністратором
+// function isAdmin(userId) {
+//   return userId && (userId.toString() === ADMIN_ID || userId === ADMIN_ID);
+// }
 
 module.exports = {
   getMainKeyboard,

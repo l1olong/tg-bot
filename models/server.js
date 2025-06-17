@@ -8,12 +8,11 @@ const Complaint = require('./complaint');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const cors = require('cors');
-const crypto = require('crypto');
 const tls = require('tls');
-const { isAdmin } = require('../controllers/controllers');
 const validateTelegramWebAppData = require('../utils/validateTelegramWebAppData');
 const { analyzeSubmissionText } = require('../services/geminiService');
 const Admin = require('../models/Admin');
+const { isAdmin } = require('../utils/authUtils');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
@@ -90,14 +89,12 @@ const auth = (req, res, next) => {
   return res.status(401).json({ error: 'Authentication required' });
 };
 
-const adminOnlyAuth = (req, res, next) => {
-  // Використовуємо вашу існуючу функцію isAdmin для перевірки
-  // Отримуємо ID з сесії або токена
+const adminOnlyAuth = async (req, res, next) => { // Додаємо async
   const userId = req.user?.id;
-  if (userId && isAdmin(userId)) {
-      return next(); // Користувач - адмін, продовжуємо
+  // Використовуємо await, оскільки isAdmin тепер асинхронна
+  if (userId && await isAdmin(userId)) { 
+      return next();
   }
-  // Якщо не адмін, повертаємо помилку доступу
   return res.status(403).json({ error: 'Admin access required' });
 };
 
@@ -197,20 +194,18 @@ app.post('/api/auth', async (req, res) => {
         return res.status(400).json({ error: 'Missing Telegram initialization data' });
       }
     }
-    
-    // Визначаємо userId та перевіряємо, чи є він адміном
+   
     const userId = telegramUser.id.toString();
-    const userIsAdmin = isAdmin(userId);
+    const userIsAdmin = await isAdmin(userId); 
     
     console.log('User role check:', { userId, isAdmin: userIsAdmin });
     
-    // --- ПРАВИЛЬНЕ МІСЦЕ ДЛЯ ОНОВЛЕННЯ ДАНИХ АДМІНА ---
-    // Якщо користувач є адміном, оновлюємо/створюємо його запис у колекції 'admins'
+    // Якщо користувач є адміном, оновлюємо/створюємо його запис
     if (userIsAdmin) {
         await Admin.findOneAndUpdate(
             { telegramId: userId },
             { username: telegramUser.username || telegramUser.first_name },
-            { upsert: true } // Якщо запис не знайдено, створити його. Це додасть головного адміна в список при першому вході.
+            { upsert: true }
         );
         console.log(`Admin [${userId}] username updated/verified.`);
     }
@@ -226,7 +221,6 @@ app.post('/api/auth', async (req, res) => {
     
     console.log('User saved to session:', { id: userId, role: userIsAdmin ? 'admin' : 'user' });
     
-    // Повертаємо успішну відповідь
     res.json({
       success: true,
       user: {
@@ -376,19 +370,16 @@ app.get('/api/complaints', auth, async (req, res) => {
   try {
     let query = {};
     
-    // Отримуємо userId з різних джерел (пріоритет: параметр запиту > заголовок > сесія)
     const requestUserId = req.query.userId || 
                          (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null) || 
                          (req.user && req.user.id);
     
-    // Додатково логуємо заголовки авторизації
     console.log('Authorization headers:', {
       authHeader: req.headers.authorization,
       token: req.headers.authorization ? req.headers.authorization.split(' ')[1] : null
     });
     
-    // Перевіряємо роль користувача
-    const userIsAdmin = isAdmin(requestUserId);
+    const userIsAdmin = await isAdmin(requestUserId);
     console.log('User role check for complaints:', { 
       requestUserId: requestUserId, 
       isAdmin: userIsAdmin,
@@ -398,13 +389,11 @@ app.get('/api/complaints', auth, async (req, res) => {
       sessionUser: req.session ? req.session.user : null
     });
     
-    // Перевіряємо наявність userId
     if (!requestUserId) {
       console.error('No userId found in request');
       return res.status(400).json({ error: 'User ID is required' });
     }
     
-    // Якщо користувач не адмін, показуємо тільки його звернення
     if (!userIsAdmin) {
       query.userId = requestUserId;
       console.log('Filtering complaints for user:', requestUserId);
@@ -427,7 +416,6 @@ app.get('/api/complaints', auth, async (req, res) => {
 // Create complaint
 app.post('/api/complaints', auth, async (req, res) => {
   try {
-    // Логуємо інформацію про запит
     console.log('Received complaint request:', {
       body: req.body,
       user: req.user,
@@ -505,7 +493,7 @@ app.post('/api/complaints', auth, async (req, res) => {
 // Update complaint (admin only)
 app.put('/api/complaints/:id', auth, async (req, res) => {
   try {
-    if (!isAdmin(req.user.id)) {
+    if (!await isAdmin(req.user.id)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
