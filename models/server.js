@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -11,6 +12,7 @@ const crypto = require('crypto');
 const tls = require('tls');
 const { isAdmin } = require('../controllers/controllers');
 const validateTelegramWebAppData = require('../utils/validateTelegramWebAppData');
+const { analyzeSubmissionText } = require('./services/geminiService');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
@@ -327,43 +329,70 @@ app.post('/api/complaints', auth, async (req, res) => {
     console.log('Received complaint request:', {
       body: req.body,
       user: req.user,
-      authHeader: req.headers.authorization,
       sessionUser: req.session ? req.session.user : null
     });
-    
-    // Отримуємо userId з різних джерел (пріоритет: тіло запиту > заголовок > сесія)
-    const userId = req.body.userId || 
-                  (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null) || 
-                  (req.user ? req.user.id : null);
+
+    // Отримуємо userId з різних джерел
+    const userId = req.body.userId || (req.user ? req.user.id : null);
     
     if (!userId) {
       console.error('No userId found in request');
-      return res.status(400).json({ error: 'User ID is required' });
+      return res.status(401).json({ error: 'User ID is required for submission' });
     }
-    
+
+    // --- ПОЧАТОК ІНТЕГРАЦІЇ GEMINI ---
+
+    // 1. Отримуємо текст повідомлення для аналізу
+    const messageToAnalyze = req.body.message;
+
+    // Перевіряємо, чи є взагалі текст для аналізу
+    if (!messageToAnalyze || messageToAnalyze.trim() === '') {
+        return res.status(400).json({ error: 'Поле повідомлення не може бути порожнім.' });
+    }
+
+    console.log(`[Moderation] Відправка тексту на аналіз Gemini: "${messageToAnalyze}"`);
+    const analysisResult = await analyzeSubmissionText(messageToAnalyze);
+    console.log('[Moderation] Результат аналізу Gemini:', analysisResult);
+
+    // 2. Перевіряємо результат модерації від Gemini
+    if (!analysisResult.isAppropriate) {
+        // Якщо текст неприйнятний, відхиляємо запит і повідомляємо користувача
+        // Ми повертаємо статус 400 (Bad Request), що є логічним у даній ситуації
+        return res.status(400).json({
+            success: false,
+            message: "Ваше звернення не пройшло автоматичну модерацію.",
+            reason: analysisResult.reason // Пояснення від AI, наприклад: "Текст містить нецензурну лексику."
+        });
+    }
+
+    // --- КІНЕЦЬ ІНТЕГРАЦІЇ GEMINI ---
+
+
+    // 3. Якщо модерація пройдена, продовжуємо виконання існуючої логіки
     // Створюємо нову скаргу
     const complaint = new Complaint({
       userId: userId,
       type: req.body.type,
       subject: req.body.subject, 
-      message: req.body.message,
+      message: req.body.message, // Зберігаємо оригінальний, перевірений текст
       contactInfo: req.body.contactInfo || 'Anonymous',
       createdAt: new Date()
     });
 
     // Зберігаємо скаргу
     const savedComplaint = await complaint.save();
-    console.log('Complaint saved successfully:', {
+    console.log('Complaint saved successfully after moderation:', {
       id: savedComplaint._id,
       userId: savedComplaint.userId,
       type: savedComplaint.type
     });
     
-    // Повідомляємо всіх клієнтів про нову скаргу
+    // Повідомляємо всіх клієнтів про нову скаргу через WebSockets
     io.emit('newComplaint');
 
-    // Повертаємо створену скаргу
-    res.json(savedComplaint);
+    // Повертаємо успішну відповідь
+    res.status(201).json(savedComplaint); // Повертаємо 201 (Created) і сам об'єкт
+
   } catch (error) {
     console.error('Error creating complaint:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
