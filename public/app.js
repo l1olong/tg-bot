@@ -564,7 +564,7 @@ function updateUserProfile() {
         profileAuthTime.textContent = '-';
     }
 
-    const manageAdminsBtnContainer = document.querySelector('.admin-only');
+    const manageAdminsBtnContainer = document.getElementById('manageAdminsContainer');
     if (manageAdminsBtnContainer) {
         console.log(`Updating admin button visibility. Role: ${currentUser.role}`);
         manageAdminsBtnContainer.style.display = currentUser.role === 'admin' ? 'block' : 'none';
