@@ -554,3 +554,123 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+.public-stats-container {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: rgba(0, 136, 204, 0.05); /* Світло-блакитний фон */
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 136, 204, 0.1);
+  transition: var(--transition);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  font-size: 1.75rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.stat-icon.complaint {
+  background-color: var(--danger-color);
+}
+
+.stat-icon.suggestion {
+  background-color: var(--success-color);
+}
+
+.stat-info {
+  text-align: left;
+}
+
+.stat-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Адаптивність для статистики */
+@media (max-width: 576px) {
+  .public-stats-container {
+      flex-direction: column;
+      align-items: flex-start;
+  }
+}.public-stats-container {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: rgba(0, 136, 204, 0.05); /* Світло-блакитний фон */
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 136, 204, 0.1);
+  transition: var(--transition);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  font-size: 1.75rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.stat-icon.complaint {
+  background-color: var(--danger-color);
+}
+
+.stat-icon.suggestion {
+  background-color: var(--success-color);
+}
+
+.stat-info {
+  text-align: left;
+}
+
+.stat-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Адаптивність для статистики */
+@media (max-width: 576px) {
+  .public-stats-container {
+      flex-direction: column;
+      align-items: flex-start;
+  }
+}

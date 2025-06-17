@@ -20,6 +20,9 @@ window.tgUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing application');
     
+    // Викликаємо функцію статистики одразу, оскільки вона публічна
+    loadPublicStats();
+
     // Встановлюємо українську мову при завантаженні сторінки
     setLanguage('ua');
 
@@ -592,6 +595,8 @@ const translations = {
         endDate: 'Кінцева дата',
         clearFilter: 'Очистити',
         noFeedback: 'Немає звернень',
+        totalComplaintsLabel: 'Загалом скарг',
+        totalSuggestionsLabel: 'Загалом пропозицій'
     },
     en: {
         submitFeedback: 'Submit Feedback',
@@ -647,8 +652,40 @@ const translations = {
         endDate: 'End date',
         clearFilter: 'Clear',
         noFeedback: 'No feedback',
+        totalComplaintsLabel: 'Total Complaints',
+        totalSuggestionsLabel: 'Total Suggestions'
     }
 };
+
+async function loadPublicStats() {
+    console.log('Fetching public stats...');
+    const statsBlock = document.getElementById('publicStats');
+    const complaintsCountEl = document.getElementById('totalComplaintsStat');
+    const suggestionsCountEl = document.getElementById('totalSuggestionsStat');
+
+    try {
+        const response = await fetch('/api/complaints/stats');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch stats: ${response.status}`);
+        }
+        const stats = await response.json();
+        
+        console.log('Received public stats:', stats);
+
+        if (complaintsCountEl) {
+            complaintsCountEl.textContent = stats.complaints || 0;
+        }
+        if (suggestionsCountEl) {
+            suggestionsCountEl.textContent = stats.suggestions || 0;
+        }
+
+    } catch (error) {
+        console.error('Error loading public stats:', error);
+        if (statsBlock) {
+             statsBlock.innerHTML = `<p class="text-danger small w-100 text-center">${currentLanguage === 'ua' ? 'Не вдалося завантажити статистику.' : 'Could not load stats.'}</p>`;
+        }
+    }
+}
 
 function setLanguage(lang) {
     currentLanguage = lang;
@@ -1397,6 +1434,7 @@ function resetFieldHighlights() {
 
 socket.on('newComplaint', () => {
     updateFeedbackList();
+    loadPublicStats();
 });
 
 socket.on('complaintUpdated', () => {

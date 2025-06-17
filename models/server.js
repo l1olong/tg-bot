@@ -269,6 +269,41 @@ app.post('/api/auth/telegram', (req, res) => {
   }
 });
 
+app.get('/api/complaints/stats', async (req, res) => {
+  try {
+      // Використовуємо агрегацію MongoDB для ефективного підрахунку
+      const stats = await Complaint.aggregate([
+          {
+              $group: {
+                  _id: '$type', // Групуємо документи за полем 'type'
+                  count: { $sum: 1 } // Рахуємо кількість документів у кожній групі
+              }
+          }
+      ]);
+
+      // Перетворюємо результат агрегації в простий об'єкт
+      const result = {
+          complaints: 0,
+          suggestions: 0
+      };
+
+      stats.forEach(stat => {
+          if (stat._id === 'complaint') {
+              result.complaints = stat.count;
+          } else if (stat._id === 'suggestion') {
+              result.suggestions = stat.count;
+          }
+      });
+
+      console.log('Public stats fetched successfully:', result);
+      res.json(result);
+
+  } catch (error) {
+      console.error('Error fetching public stats:', error);
+      res.status(500).json({ error: 'Internal server error while fetching stats' });
+  }
+});
+
 // Get complaints
 app.get('/api/complaints', auth, async (req, res) => {
   try {
