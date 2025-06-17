@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const tls = require('tls');
 const { isAdmin } = require('../controllers/controllers');
 const validateTelegramWebAppData = require('../utils/validateTelegramWebAppData');
-const { analyzeSubmissionText } = require('./services/geminiService');
+const { analyzeSubmissionText } = require('../services/geminiService');
 
 // Force TLS 1.2
 tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
