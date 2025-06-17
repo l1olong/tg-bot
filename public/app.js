@@ -4,6 +4,7 @@ const socket = io({
 });
 
 let currentLanguage = 'ua';
+
 let currentUser = {
     id: null,
     role: 'user',
@@ -21,28 +22,46 @@ window.tgUser = null;
 
 // Ініціалізація Telegram WebApp
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing application');
+    console.log('DOM loaded. Initializing application.');
     
-    // Викликаємо функцію статистики одразу, оскільки вона публічна
+    // Ініціалізуємо базові елементи, які не залежать від ролі
+    setLanguage('ua'); 
     loadPublicStats();
-
-    // Встановлюємо українську мову при завантаженні сторінки
-    setLanguage('ua');
-
+    // Ініціалізуємо модальні вікна одразу
     adminManagementModal = new bootstrap.Modal(document.getElementById('adminManagementModal'));
     addAdminModal = new bootstrap.Modal(document.getElementById('addAdminModal'));
-
-    // Додаємо затримку для гарантії завантаження Telegram WebApp
-    setTimeout(() => {
-        initializeTelegramWebApp();
-        
-        // Додаємо анімацію елементів
-        animateElementsOnLoad();
-    }, 500);
-
+    // Додаємо обробники подій для кнопок модальних вікон
     document.getElementById('manageAdminsBtn')?.addEventListener('click', openAdminManagementModal);
     document.getElementById('showAddAdminModalBtn')?.addEventListener('click', openAddAdminModal);
     document.getElementById('saveNewAdminBtn')?.addEventListener('click', saveNewAdmin);
+
+
+    // --- НАДІЙНА ЛОГІКА ЗАПУСКУ ---
+    const telegram = window.Telegram?.WebApp;
+    const mainContent = document.getElementById('mainContent');
+    const requiredMsg = document.getElementById('telegramRequiredMsg');
+
+    // Сховати контент за замовчуванням. Він з'явиться тільки після перевірки.
+    mainContent.style.display = 'none';
+    requiredMsg.style.display = 'none';
+
+    if (telegram && telegram.initDataUnsafe?.user) {
+        console.log('[Init] Telegram WebApp data found. Starting server authentication...');
+        
+        try {
+            telegram.ready();
+            telegram.expand();
+        } catch (e) {
+            console.error('[Init] Error with Telegram SDK:', e);
+        }
+        
+        authenticateWithTelegramUser(telegram.initDataUnsafe.user, telegram.initData);
+
+    } else {
+        console.warn("[Init] Telegram WebApp data not found. App cannot start securely.");
+        updateUserDataAndUI(null); // Скидаємо будь-які старі дані та ховаємо адмін-кнопку
+        showTelegramRequiredMessage();
+    }
 });
 
 // Функція для ініціалізації Telegram WebApp
@@ -174,134 +193,218 @@ function showTelegramRequiredMessage() {
     }
 }
 
-// Функція для автентифікації з даними користувача Telegram
-async function authenticateWithTelegramUser(telegramUser, initData) {
-    console.log('Authenticating with Telegram user data:', {
-        id: telegramUser.id,
-        username: telegramUser.username || telegramUser.first_name
-    });
-    
-    try {
-        // Показуємо індикатор завантаження
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.id = 'authLoadingIndicator';
-        loadingIndicator.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center';
-        loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        loadingIndicator.style.zIndex = '9999';
-        loadingIndicator.innerHTML = `
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        `;
-        document.body.appendChild(loadingIndicator);
+// function updateUserDataAndUI(userData) {
+//     if (userData && userData.id) {
+//         currentUser.id = userData.id.toString();
+//         currentUser.role = userData.role || 'user';
+//         currentUser.isMainAdmin = userData.isMainAdmin || false;
         
-        // Надсилаємо запит на авторизацію
+//         localStorage.setItem('user', JSON.stringify({
+//             id: currentUser.id,
+//             role: currentUser.role,
+//             isMainAdmin: currentUser.isMainAdmin,
+//             username: userData.username,
+//             photo_url: userData.photo_url
+//         }));
+        
+//         console.log('User state updated:', currentUser);
+//     } else {
+//         currentUser = { id: null, role: 'user', isMainAdmin: false };
+//         localStorage.removeItem('user');
+//         console.log('User state cleared.');
+//     }
+    
+//     // Завжди оновлюємо UI після зміни стану
+//     updateUserProfile();
+// }
+
+function updateUserDataAndUI(userData) {
+    if (userData && userData.id) {
+        currentUser.id = userData.id.toString();
+        currentUser.role = userData.role || 'user';
+        currentUser.isMainAdmin = userData.isMainAdmin || false;
+        
+        localStorage.setItem('user', JSON.stringify({
+            id: currentUser.id,
+            role: currentUser.role,
+            isMainAdmin: currentUser.isMainAdmin,
+            username: userData.username,
+            photo_url: userData.photo_url
+        }));
+        
+        console.log('[Auth] User state updated:', currentUser);
+    } else {
+        currentUser = { id: null, role: 'user', isMainAdmin: false };
+        localStorage.removeItem('user');
+        console.log('[Auth] User state cleared.');
+    }
+
+    updateUserProfile();
+}
+
+// Функція для автентифікації з даними користувача Telegram
+// async function authenticateWithTelegramUser(telegramUser, initData) {
+//     console.log('Authenticating with Telegram user data:', {
+//         id: telegramUser.id,
+//         username: telegramUser.username || telegramUser.first_name
+//     });
+    
+//     try {
+//         // Показуємо індикатор завантаження
+//         const loadingIndicator = document.createElement('div');
+//         loadingIndicator.id = 'authLoadingIndicator';
+//         loadingIndicator.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center';
+//         loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+//         loadingIndicator.style.zIndex = '9999';
+//         loadingIndicator.innerHTML = `
+//             <div class="spinner-border text-primary" role="status">
+//                 <span class="visually-hidden">Loading...</span>
+//             </div>
+//         `;
+//         document.body.appendChild(loadingIndicator);
+        
+//         // Надсилаємо запит на авторизацію
+//         const response = await fetch('/api/auth', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify({ 
+//                 telegramUser,
+//                 initData
+//             }),
+//             credentials: 'include'
+//         });
+        
+//         // Видаляємо індикатор завантаження
+//         if (loadingIndicator && loadingIndicator.parentNode) {
+//             document.body.removeChild(loadingIndicator);
+//         }
+        
+//         if (response.ok) {
+//             const data = await response.json();
+            
+//             if (data.success && data.user) {
+//                 updateUserDataAndUI(data.user);
+
+//                 // Зберігаємо дані користувача
+//                 currentUser.id = data.user.id;
+//                 currentUser.role = data.user.role;
+//                 isAuthenticated = true;
+//                 userRole = data.user.role;
+//                 currentUser.isMainAdmin = data.user.isMainAdmin;
+                
+//                 // Переконуємося, що window.tgUser завжди містить актуальні дані
+//                 if (!window.tgUser || window.tgUser.id !== telegramUser.id) {
+//                     window.tgUser = telegramUser;
+//                     console.log('Updated window.tgUser with current Telegram user data');
+//                 }
+                
+//                 // Зберігаємо в localStorage для збереження між сесіями
+//                 const userDataToStore = {
+//                     id: data.user.id,
+//                     username: data.user.username || telegramUser.first_name,
+//                     photo_url: data.user.photo_url || telegramUser.photo_url,
+//                     role: data.user.role,
+//                     auth_time: new Date().toISOString() // Додаємо час автентифікації
+//                 };
+                
+//                 localStorage.setItem('user', JSON.stringify(userDataToStore));
+//                 console.log('User data saved to localStorage:', userDataToStore);
+                
+//                 console.log('Successfully authenticated with Telegram', {
+//                     id: data.user.id,
+//                     role: data.user.role
+//                 });
+                
+//                 // Показуємо основний контент
+//                 const mainContent = document.getElementById('mainContent');
+//                 if (mainContent) {
+//                     mainContent.style.display = 'block';
+//                 }
+                
+//                 // Приховуємо повідомлення про Telegram, якщо воно є
+//                 const telegramRequiredMsg = document.getElementById('telegramRequiredMsg');
+//                 if (telegramRequiredMsg) {
+//                     telegramRequiredMsg.style.display = 'none';
+//                 }
+                
+//                 // Оновлюємо UI та завантажуємо дані
+//                 updateUI();
+//                 initializeFilters();
+//                 loadComplaints();
+                
+//                 // Показуємо повідомлення про успішну авторизацію
+//                 showToast(
+//                     currentLanguage === 'ua' 
+//                         ? 'Успішна авторизація через Telegram' 
+//                         : 'Successfully authenticated with Telegram',
+//                     'success'
+//                 );
+//             }
+//         } else {
+//             let errorData;
+//             try {
+//                 errorData = await response.json();
+//             } catch (e) {
+//                 errorData = { error: 'Unknown error' };
+//             }
+            
+//             console.error('Authentication error:', errorData);
+//             showToast(
+//                 currentLanguage === 'ua' 
+//                     ? 'Помилка автентифікації: ' + (errorData.error || 'невідома помилка')
+//                     : 'Authentication error: ' + (errorData.error || 'unknown error'),
+//                 'error'
+//             );
+            
+//             // Показуємо повідомлення про необхідність відкрити через Telegram
+//             showTelegramRequiredMessage();
+//         }
+//     } catch (error) {
+//         console.error('Error during authentication:', error);
+//         showToast(
+//             currentLanguage === 'ua' 
+//                 ? 'Помилка під час автентифікації: ' + error.message
+//                 : 'Error during authentication: ' + error.message,
+//             'error'
+//         );
+        
+//         // Показуємо повідомлення про необхідність відкрити через Telegram
+//         showTelegramRequiredMessage();
+//     }
+// }
+
+async function authenticateWithTelegramUser(telegramUser, initData) {
+    console.log('[Auth] Starting server authentication...');
+    try {
         const response = await fetch('/api/auth', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                telegramUser,
-                initData
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegramUser, initData }),
             credentials: 'include'
         });
-        
-        // Видаляємо індикатор завантаження
-        if (loadingIndicator && loadingIndicator.parentNode) {
-            document.body.removeChild(loadingIndicator);
-        }
-        
-        if (response.ok) {
-            const data = await response.json();
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.user) {
+            updateUserDataAndUI(data.user);
             
-            if (data.success && data.user) {
-                // Зберігаємо дані користувача
-                currentUser.id = data.user.id;
-                currentUser.role = data.user.role;
-                isAuthenticated = true;
-                userRole = data.user.role;
-                currentUser.isMainAdmin = data.user.isMainAdmin;
-                
-                // Переконуємося, що window.tgUser завжди містить актуальні дані
-                if (!window.tgUser || window.tgUser.id !== telegramUser.id) {
-                    window.tgUser = telegramUser;
-                    console.log('Updated window.tgUser with current Telegram user data');
-                }
-                
-                // Зберігаємо в localStorage для збереження між сесіями
-                const userDataToStore = {
-                    id: data.user.id,
-                    username: data.user.username || telegramUser.first_name,
-                    photo_url: data.user.photo_url || telegramUser.photo_url,
-                    role: data.user.role,
-                    auth_time: new Date().toISOString() // Додаємо час автентифікації
-                };
-                
-                localStorage.setItem('user', JSON.stringify(userDataToStore));
-                console.log('User data saved to localStorage:', userDataToStore);
-                
-                console.log('Successfully authenticated with Telegram', {
-                    id: data.user.id,
-                    role: data.user.role
-                });
-                
-                // Показуємо основний контент
-                const mainContent = document.getElementById('mainContent');
-                if (mainContent) {
-                    mainContent.style.display = 'block';
-                }
-                
-                // Приховуємо повідомлення про Telegram, якщо воно є
-                const telegramRequiredMsg = document.getElementById('telegramRequiredMsg');
-                if (telegramRequiredMsg) {
-                    telegramRequiredMsg.style.display = 'none';
-                }
-                
-                // Оновлюємо UI та завантажуємо дані
-                updateUI();
-                initializeFilters();
-                loadComplaints();
-                
-                // Показуємо повідомлення про успішну авторизацію
-                showToast(
-                    currentLanguage === 'ua' 
-                        ? 'Успішна авторизація через Telegram' 
-                        : 'Successfully authenticated with Telegram',
-                    'success'
-                );
-            }
+            // Показуємо контент ТІЛЬКИ ПІСЛЯ успішної аутентифікації
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('telegramRequiredMsg').style.display = 'none';
+
+            // Завантажуємо дані, специфічні для користувача
+            loadComplaints(); 
+            showToast(currentLanguage === 'ua' ? 'Авторизація успішна' : 'Successfully authenticated', 'success');
         } else {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                errorData = { error: 'Unknown error' };
-            }
-            
-            console.error('Authentication error:', errorData);
-            showToast(
-                currentLanguage === 'ua' 
-                    ? 'Помилка автентифікації: ' + (errorData.error || 'невідома помилка')
-                    : 'Authentication error: ' + (errorData.error || 'unknown error'),
-                'error'
-            );
-            
-            // Показуємо повідомлення про необхідність відкрити через Telegram
-            showTelegramRequiredMessage();
+            throw new Error(data.error || 'Authentication failed on server');
         }
     } catch (error) {
-        console.error('Error during authentication:', error);
-        showToast(
-            currentLanguage === 'ua' 
-                ? 'Помилка під час автентифікації: ' + error.message
-                : 'Error during authentication: ' + error.message,
-            'error'
-        );
-        
-        // Показуємо повідомлення про необхідність відкрити через Telegram
+        console.error('[Auth] Authentication process failed:', error);
+        updateUserDataAndUI(null);
         showTelegramRequiredMessage();
+        showToast(error.message, 'error');
     }
 }
 
@@ -463,6 +566,7 @@ function updateUserProfile() {
 
     const manageAdminsBtnContainer = document.querySelector('#manageAdminsBtn')?.parentElement;
     if (manageAdminsBtnContainer) {
+        console.log(`Updating admin button visibility. Role: ${currentUser.role}`);
         manageAdminsBtnContainer.style.display = currentUser.role === 'admin' ? 'block' : 'none';
     }
     
@@ -514,7 +618,6 @@ function renderAdminList(admins) {
         </li>
     `).join('');
 
-    // Додаємо обробники подій для кнопок видалення
     container.querySelectorAll('.delete-admin-btn').forEach(button => {
         button.addEventListener('click', handleDeleteAdminClick);
     });
