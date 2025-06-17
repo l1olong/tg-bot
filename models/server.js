@@ -344,6 +344,7 @@ app.post('/api/complaints', auth, async (req, res) => {
 
     // 1. Отримуємо текст повідомлення для аналізу
     const messageToAnalyze = req.body.message;
+    const subjectToAnalyze = req.body.subject;
 
     // Перевіряємо, чи є взагалі текст для аналізу
     if (!messageToAnalyze || messageToAnalyze.trim() === '') {
@@ -351,7 +352,7 @@ app.post('/api/complaints', auth, async (req, res) => {
     }
 
     console.log(`[Moderation] Відправка тексту на аналіз Gemini: "${messageToAnalyze}"`);
-    const analysisResult = await analyzeSubmissionText(messageToAnalyze);
+    const analysisResult = await analyzeSubmissionText(messageToAnalyze, subjectToAnalyze);
     console.log('[Moderation] Результат аналізу Gemini:', analysisResult);
 
     // 2. Перевіряємо результат модерації від Gemini
