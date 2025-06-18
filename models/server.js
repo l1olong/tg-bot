@@ -471,7 +471,6 @@ app.post('/api/complaints', auth, async (req, res) => {
 
     // --- КІНЕЦЬ ІНТЕГРАЦІЇ GEMINI ---
 
-
     // 3. Якщо модерація пройдена, продовжуємо виконання існуючої логіки
     // Створюємо нову скаргу
     const complaint = new Complaint({

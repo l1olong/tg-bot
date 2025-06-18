@@ -614,7 +614,9 @@ body {
       flex-direction: column;
       align-items: flex-start;
   }
-}.public-stats-container {
+}
+
+.public-stats-container {
   display: flex;
   justify-content: space-around;
   gap: 1rem;
