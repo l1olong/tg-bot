@@ -194,6 +194,11 @@ function showTelegramRequiredMessage() {
 }
 
 function updateUserDataAndUI(userData) {
+    // Ensure we have a single source of truth for whether the UI that depends on
+    // the authenticated user has already been initialised (filters, stats etc.)
+    if (typeof window._appInitialized === 'undefined') {
+        window._appInitialized = false;
+    }
     if (userData && userData.id) {
         currentUser.id = userData.id.toString();
         currentUser.role = userData.role || 'user';
@@ -208,6 +213,16 @@ function updateUserDataAndUI(userData) {
         }));
         
         console.log('[Auth] User state updated:', currentUser);
+        // Оновлюємо глобальну змінну, що визначає роль для рендеру інтерфейсу
+        userRole = currentUser.role;
+        // Оновлюємо інтерфейс відповідно до нової ролі
+        updateUI();
+        // Ініціалізуємо фільтри та перемикач статистики лише один раз
+        if (!window._appInitialized) {
+            initializeFilters();
+            initializeStatsToggle();
+            window._appInitialized = true;
+        }
     } else {
         currentUser = { id: null, role: 'user', isMainAdmin: false };
         localStorage.removeItem('user');
@@ -239,7 +254,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
             document.getElementById('telegramRequiredMsg').style.display = 'none';
 
             // Завантажуємо дані, специфічні для користувача
-            loadComplaints(); 
+            loadComplaints();
             showToast(currentLanguage === 'ua' ? 'Авторизація успішна' : 'Successfully authenticated', 'success');
         } else {
             throw new Error(data.error || 'Authentication failed on server');
