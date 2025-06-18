@@ -208,8 +208,26 @@ function updateUserDataAndUI(userData) {
         }));
         
         console.log('[Auth] User state updated:', currentUser);
+
+        // Ensure we have a flag to prevent multiple initializations
+        if (typeof window._appInitialized === 'undefined') {
+            window._appInitialized = false;
+        }
+        // Update global role for role-based UI rendering
+        userRole = currentUser.role;
+        updateUI();
+
+        // Initialize filters & stats toggle only once after successful auth
+        if (!window._appInitialized) {
+            initializeFilters();
+            if (typeof initializeStatsToggle === 'function') {
+                initializeStatsToggle();
+            }
+            window._appInitialized = true;
+        }
     } else {
         currentUser = { id: null, role: 'user', isMainAdmin: false };
+        window._appInitialized = false;
         localStorage.removeItem('user');
         console.log('[Auth] User state cleared.');
     }
@@ -982,19 +1000,14 @@ function filterAndDisplayComplaints() {
             return complaintDateFormatted === singleDateValue;
         }
         
-        // Date range filter
+        // Date range filter (require BOTH dates)
         if (startDateValue && endDateValue) {
             return complaintDateFormatted >= startDateValue && complaintDateFormatted <= endDateValue;
         }
-        
-        // Start date only
-        if (startDateValue) {
-            return complaintDateFormatted >= startDateValue;
-        }
-        
-        // End date only
-        if (endDateValue) {
-            return complaintDateFormatted <= endDateValue;
+
+        // If range is incomplete, do not apply date filtering
+        if (startDateValue || endDateValue) {
+            return false;
         }
 
         return true;
