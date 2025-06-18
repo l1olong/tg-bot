@@ -194,11 +194,6 @@ function showTelegramRequiredMessage() {
 }
 
 function updateUserDataAndUI(userData) {
-    // Ensure we have a single source of truth for whether the UI that depends on
-    // the authenticated user has already been initialised (filters, stats etc.)
-    if (typeof window._appInitialized === 'undefined') {
-        window._appInitialized = false;
-    }
     if (userData && userData.id) {
         currentUser.id = userData.id.toString();
         currentUser.role = userData.role || 'user';
@@ -213,16 +208,6 @@ function updateUserDataAndUI(userData) {
         }));
         
         console.log('[Auth] User state updated:', currentUser);
-        // Оновлюємо глобальну змінну, що визначає роль для рендеру інтерфейсу
-        userRole = currentUser.role;
-        // Оновлюємо інтерфейс відповідно до нової ролі
-        updateUI();
-        // Ініціалізуємо фільтри та перемикач статистики лише один раз
-        if (!window._appInitialized) {
-            initializeFilters();
-            initializeStatsToggle();
-            window._appInitialized = true;
-        }
     } else {
         currentUser = { id: null, role: 'user', isMainAdmin: false };
         localStorage.removeItem('user');
@@ -254,7 +239,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
             document.getElementById('telegramRequiredMsg').style.display = 'none';
 
             // Завантажуємо дані, специфічні для користувача
-            loadComplaints();
+            loadComplaints(); 
             showToast(currentLanguage === 'ua' ? 'Авторизація успішна' : 'Successfully authenticated', 'success');
         } else {
             throw new Error(data.error || 'Authentication failed on server');
@@ -987,7 +972,6 @@ function filterAndDisplayComplaints() {
         
         if (answeredFilterChecked && !complaint.adminResponse) return false;
         
-        // Apply date filtering
         const complaintDate = new Date(complaint.date || complaint.createdAt);
         
         // Format complaint date to YYYY-MM-DD for comparison
@@ -1012,7 +996,7 @@ function filterAndDisplayComplaints() {
         if (endDateValue) {
             return complaintDateFormatted <= endDateValue;
         }
-        
+
         return true;
     });
     
@@ -1071,7 +1055,7 @@ function initializeFilters() {
     document.getElementById('sortOrder').addEventListener('change', filterAndDisplayComplaints);
     
     // Initialize date pickers if Flatpickr is available
-    if (typeof flatpickr !== 'undefined') {
+     if (typeof flatpickr !== 'undefined') {
         // Configure single date picker
         const singleDatePicker = flatpickr('#singleDateFilter', {
             dateFormat: 'Y-m-d',
@@ -1302,6 +1286,10 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     } finally {
         // Завжди відновлюємо кнопку після запиту
         resetLoadingState();
+        const sendButton = e.target.querySelector('button[type="submit"]');
+        const originalButtonText = sendButton.innerHTML;
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalButtonText;
     }
 });
 
@@ -1421,9 +1409,11 @@ async function sendResponse() {
     
     // Показуємо індикатор завантаження
     const sendResponseBtn = document.getElementById('sendResponseBtn');
-    const originalButtonText = sendResponseBtn.innerHTML;
     const resetLoadingState = showLoadingState(sendResponseBtn, currentLanguage === 'ua' ? 'Надсилання...' : 'Sending...');
-    
+    const sendButton = document.getElementById('sendResponseBtn');
+    const originalButtonText = sendButton.innerHTML;
+    sendButton.disabled = false;
+    sendButton.innerHTML = originalButtonText;
     try {
         // Показуємо індикатор завантаження
         const response = await fetch(`/api/complaints/${complaintId}`, {
