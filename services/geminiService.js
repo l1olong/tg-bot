@@ -14,7 +14,6 @@ const model = genAI.getGenerativeModel({
   },
 });
 
-
 /**
  * Аналізує тему та повідомлення звернення на доречність.
  * @param {string} subject - Тема звернення.

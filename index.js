@@ -2,6 +2,9 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 
+// Експортуємо екземпляр бота для використання в інших файлах
+module.exports = bot;
+
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const webAppUrl = process.env.WEBAPP_URL || 'https://tg-bot-aabw.onrender.com';

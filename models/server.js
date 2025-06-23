@@ -4,6 +4,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
+const bot = require('../index');
 const Complaint = require('./complaint');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
@@ -512,8 +513,7 @@ app.put('/api/complaints/:id', auth, async (req, res) => {
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) {
       return res.status(404).json({ error: 'Complaint not found' });
-    }
-
+    }    // Оновлюємо статус та зберігаємо відповідь
     complaint.status = 'answered';
     complaint.adminResponse = {
       text: req.body.response,
@@ -522,6 +522,18 @@ app.put('/api/complaints/:id', auth, async (req, res) => {
 
     await complaint.save();
     io.emit('complaintUpdated');
+
+    // Відправляємо повідомлення в Telegram
+    try {
+      const messageText = `🔔 Ви отримали відповідь на ваше звернення!\n\n📝 Тема: ${complaint.subject}\n\n🔗 Перейдіть у бот, щоб переглянути деталі.`;
+      
+      await bot.sendMessage(complaint.userId, messageText, {
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      });
+    } catch (error) {
+      console.error('Error sending Telegram notification:', error);
+    }
 
     res.json(complaint);
   } catch (error) {
