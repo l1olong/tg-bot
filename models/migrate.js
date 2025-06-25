@@ -17,7 +17,7 @@ async function migrateComplaints() {
             }
 
             // Set userRole based on userId
-            complaint.userRole = complaint.userId === process.env.ADMIN_ID ? 'admin' : 'user';
+            complaint.userRole = complaint.userId === process.env.ADMIN_ID && userId === process.env.ADMIN_ID2 ? 'admin' : 'user';
 
             // Add adminResponse structure if status is answered but no adminResponse exists
             if (complaint.status === 'answered' && !complaint.adminResponse) {

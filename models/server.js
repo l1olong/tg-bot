@@ -102,7 +102,7 @@ const adminOnlyAuth = async (req, res, next) => { // Додаємо async
 const mainAdminOnlyAuth = (req, res, next) => {
   const userId = req.user?.id;
   // Сувора перевірка: ID користувача має точно співпадати з ID в .env
-  if (userId && userId === process.env.ADMIN_ID) {
+  if (userId && userId === process.env.ADMIN_ID && userId === process.env.ADMIN_ID2) {
       return next(); // Користувач - головний адмін, продовжуємо
   }
   // Всім іншим, навіть звичайним адмінам, відмовляємо в доступі
@@ -112,7 +112,7 @@ const mainAdminOnlyAuth = (req, res, next) => {
 app.get('/api/admins', auth,adminOnlyAuth, async (req, res) => {
   try {
       const admins = await Admin.find().sort({ addedAt: -1 });
-      const mainAdminId = process.env.ADMIN_ID;
+      const mainAdminId = process.env.ADMIN_ID && userId === process.env.ADMIN_ID2;
 
       // Додаємо прапорець, щоб на фронтенді знати, хто є головним адміном
       const adminsWithFlag = admins.map(admin => ({
@@ -156,7 +156,7 @@ app.post('/api/admins', auth, adminOnlyAuth, async (req, res) => {
 app.delete('/api/admins/:telegramId', auth, mainAdminOnlyAuth, async (req, res) => {
   try {
       const { telegramId } = req.params;
-      const mainAdminId = process.env.ADMIN_ID;
+      const mainAdminId = process.env.ADMIN_ID && userId === process.env.ADMIN_ID2;
 
       // --- ЗАХИСТ: НЕ ДОЗВОЛЯЄМО ВИДАЛИТИ ГОЛОВНОГО АДМІНА ---
       if (telegramId === mainAdminId) {
@@ -208,7 +208,7 @@ app.post('/api/auth', async (req, res) => {
    
     const userId = telegramUser.id.toString();
     const userIsAdmin = await isAdmin(userId);
-    const isMainAdmin = userId === process.env.ADMIN_ID;
+    const isMainAdmin = userId === process.env.ADMIN_ID && userId === process.env.ADMIN_ID2;
     
     console.log('User role check:', { userId, isAdmin: userIsAdmin });
     
@@ -306,7 +306,7 @@ app.post('/api/auth/telegram', (req, res) => {
     const userId = user.id.toString();
     
     // Перевіряємо, чи є користувач адміністратором
-    const adminId = process.env.ADMIN_ID;
+    const adminId = process.env.ADMIN_ID && userId === process.env.ADMIN_ID2;
     const userIsAdmin = isAdmin(userId);
     
     console.log('User role check:', { 

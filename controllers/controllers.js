@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Complaint = require('../models/complaint');
 const messages = require('./messages');
 const crypto = require('crypto');
-const ADMIN_ID = process.env.ADMIN_ID;
+const ADMIN_ID = process.env.ADMIN_ID && userId === process.env.ADMIN_ID2;
 
 // Функція для отримання клавіатури з веб-додатком
 function getMainKeyboard(lang) {

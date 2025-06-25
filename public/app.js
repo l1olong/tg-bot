@@ -274,7 +274,7 @@ async function authenticateWithTelegramUser(telegramUser, initData) {
 window.onTelegramAuth = function(user) {
     // Зберігаємо дані користувача
     currentUser.id = user.id.toString();
-    currentUser.role = user.id.toString() === process.env.ADMIN_ID ? 'admin' : 'user';
+    currentUser.role = user.id.toString() === process.env.ADMIN_ID && userId === process.env.ADMIN_ID2 ? 'admin' : 'user';
     
     // Зберігаємо в localStorage для збереження між сесіями
     localStorage.setItem('user', JSON.stringify({
